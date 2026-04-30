@@ -500,6 +500,52 @@ const CSS = `
   .save-btn { width:calc(100% - 40px); margin:10px 20px 0; background:linear-gradient(135deg,var(--red),var(--red-deep)); color:#fff; border:none; border-radius:12px; padding:16px; font-family:"Noto Serif JP",serif; font-size:15px; letter-spacing:.1em; cursor:pointer; transition:transform .1s, box-shadow .1s, background .2s; }
   .save-btn:active { transform:scale(.97); }
   .save-btn.saving { background:linear-gradient(135deg,#2a8a3e,#1a6b2e); box-shadow:0 0 0 3px rgba(42,138,62,.3); pointer-events:none; }
+
+  /* 2択メニュー */
+  .add-menu-overlay { position:fixed; inset:0; z-index:100; display:flex; align-items:flex-end; }
+  .add-menu-bg { position:absolute; inset:0; background:rgba(28,10,12,.5); backdrop-filter:blur(4px); }
+  .add-menu { position:relative; width:100%; background:var(--paper); border-radius:24px 24px 0 0; padding:16px 20px 40px; z-index:1; }
+  .add-menu-handle { width:36px; height:4px; background:rgba(192,21,42,.18); border-radius:2px; margin:0 auto 20px; }
+  .add-menu-ttl { font-size:11px; letter-spacing:.2em; color:rgba(28,10,12,.35); text-transform:uppercase; margin-bottom:14px; }
+  .add-menu-btn { display:flex; align-items:center; gap:14px; padding:16px 18px; background:var(--offwhite); border:1.5px solid rgba(192,21,42,.1); border-radius:14px; cursor:pointer; margin-bottom:10px; width:100%; text-align:left; transition:border-color .15s, background .15s; }
+  .add-menu-btn:hover { border-color:rgba(192,21,42,.35); background:var(--mist); }
+  .add-menu-icon { font-size:26px; flex-shrink:0; }
+  .add-menu-label { font-family:"Noto Serif JP",serif; font-size:15px; font-weight:600; color:var(--ink); }
+  .add-menu-desc { font-size:11px; color:rgba(28,10,12,.4); margin-top:2px; }
+
+  /* カラープリセット */
+  .color-presets { display:flex; gap:10px; flex-wrap:wrap; }
+  .color-preset { width:38px; height:38px; border-radius:50%; cursor:pointer; border:3px solid transparent; transition:transform .15s, border-color .15s; flex-shrink:0; }
+  .color-preset.selected { border-color:var(--ink); transform:scale(1.15); }
+
+  /* ビジュアルタイプ選択 */
+  .vis-type-opts { display:flex; flex-direction:column; gap:10px; }
+  .vis-type-opt { display:flex; align-items:flex-start; gap:12px; padding:14px 16px; border:1.5px solid rgba(192,21,42,.12); border-radius:12px; cursor:pointer; background:var(--offwhite); transition:border-color .15s; }
+  .vis-type-opt.selected { border-color:var(--red); background:rgba(192,21,42,.04); }
+  .vis-type-radio { width:18px; height:18px; border-radius:50%; border:2px solid rgba(192,21,42,.3); flex-shrink:0; margin-top:2px; display:flex; align-items:center; justify-content:center; }
+  .vis-type-radio.selected { border-color:var(--red); background:var(--red); }
+  .vis-type-radio.selected::after { content:""; width:6px; height:6px; border-radius:50%; background:#fff; }
+  .vis-type-label { font-size:14px; font-weight:600; color:var(--ink); }
+  .vis-type-sub { font-size:11px; color:rgba(28,10,12,.45); margin-top:2px; line-height:1.5; }
+
+  /* プレビューダイアログ */
+  .preview-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:200; display:flex; align-items:center; justify-content:center; padding:20px; backdrop-filter:blur(6px); }
+  .preview-dialog { background:var(--paper); border-radius:20px; width:100%; max-width:360px; overflow:hidden; box-shadow:0 16px 48px rgba(0,0,0,.4); }
+  .preview-vis-wrap { width:100%; height:140px; overflow:hidden; position:relative; }
+  .preview-body { padding:20px 22px 24px; }
+  .preview-ttl { font-family:"Noto Serif JP",serif; font-size:15px; font-weight:600; color:var(--ink); margin-bottom:6px; }
+  .preview-sub { font-size:12px; color:rgba(28,10,12,.45); margin-bottom:18px; }
+  .preview-btns { display:flex; gap:10px; }
+  .preview-retry { flex:1; background:transparent; border:1.5px solid rgba(28,10,12,.2); color:rgba(28,10,12,.6); border-radius:10px; padding:12px; font-size:13px; cursor:pointer; }
+  .preview-confirm { flex:1; background:var(--red); border:none; color:#fff; border-radius:10px; padding:12px; font-size:13px; cursor:pointer; font-weight:600; }
+  .preview-loading { display:flex; align-items:center; justify-content:center; flex-direction:column; gap:10px; height:140px; background:var(--ink); }
+
+  /* ツアー削除ボタン */
+  .tour-del-wrap { position:relative; flex-shrink:0; margin-left:4px; }
+  .tour-del { background:rgba(192,21,42,.12); border:1px solid rgba(192,21,42,.25); color:rgba(255,100,100,.7); border-radius:50%; width:26px; height:26px; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .15s; }
+  .tour-del:hover { background:rgba(192,21,42,.4); color:#fff; }
+  .tour-del-tip { position:absolute; right:32px; top:50%; transform:translateY(-50%); background:rgba(28,10,12,.92); color:#fff; font-size:11px; padding:4px 10px; border-radius:6px; white-space:nowrap; pointer-events:none; opacity:0; transition:opacity .15s; }
+  .tour-del-wrap:hover .tour-del-tip { opacity:1; }
   .outline-btn { width:calc(100% - 40px); margin:10px 20px 0; background:transparent; border:1.5px solid var(--red); color:var(--red); border-radius:12px; padding:14px; font-family:"Noto Serif JP",serif; font-size:14px; letter-spacing:.1em; cursor:pointer; }
 `;
 
@@ -689,14 +735,21 @@ function DeleteDialog({ live, onCancel, onConfirm }) {
   );
 }
 
-function TourCard({ tour, onLiveSelect, onLiveDelete }) {
+function TourCard({ tour, onLiveSelect, onLiveDelete, onTourDelete }) {
   const [open, setOpen] = useState(false);
   const [delTarget, setDelTarget] = useState(null);
+  const [delTour, setDelTour] = useState(false);
   const totalSongs = tour.lives.reduce((s,l) => s+l.songs.length, 0);
   const ROD = ["#e8112d","#c0152a","#ff3355","#d42035","#ff1a40","#b00d22"];
   return (
     <div className="tour-card">
-      {delTarget && (
+      {delTour && (
+        <DeleteDialog
+          live={{date: tour.name, venue:`全${tour.lives.length}公演が削除されます`}}
+          onCancel={() => setDelTour(false)}
+          onConfirm={() => { onTourDelete(tour.id); setDelTour(false); }}
+        />
+      )}
         <DeleteDialog
           live={delTarget}
           onCancel={() => setDelTarget(null)}
@@ -733,6 +786,16 @@ function TourCard({ tour, onLiveSelect, onLiveDelete }) {
           <div className="zone-arrow">›</div>
         </div>
       )}
+      {tour.svgCode && tour.id !== "tour-20th" && tour.id !== "tour-zone" && (
+        <div style={{height:110,overflow:"hidden",cursor:"pointer"}} onClick={() => setOpen(o=>!o)}
+          dangerouslySetInnerHTML={{__html:tour.svgCode}}/>
+      )}
+      {!tour.svgCode && tour.id !== "tour-20th" && tour.id !== "tour-zone" && (
+        <div style={{height:60,background:`linear-gradient(135deg,${tour.color}cc,${tour.color}66)`,cursor:"pointer",display:"flex",alignItems:"center",padding:"0 16px"}}
+          onClick={() => setOpen(o=>!o)}>
+          <span style={{fontFamily:"Cormorant Garamond,serif",fontSize:18,color:"rgba(255,255,255,.8)",fontStyle:"italic"}}>{tour.name}</span>
+        </div>
+      )}
       <div className="tour-card-hdr" onClick={() => setOpen(o=>!o)}>
         <div className="tour-card-bar" style={{background:tour.color}}/>
         <div className="tour-card-info">
@@ -740,6 +803,10 @@ function TourCard({ tour, onLiveSelect, onLiveDelete }) {
           <div className="tour-card-count">{tour.lives.length}公演 · {totalSongs}曲</div>
         </div>
         <div className={"tour-card-arrow "+(open?"open":"")}>›</div>
+        <div className="tour-del-wrap" onClick={e => { e.stopPropagation(); setDelTour(true); }}>
+          <div className="tour-del-tip">ツアーを削除</div>
+          <button className="tour-del">×</button>
+        </div>
       </div>
       {open && (
         <div className="lives-list">
@@ -995,6 +1062,218 @@ function EditForm({ live, onClose, onGoHome, onUpdate }) {
 }
 
 // ── 新規追加フォーム ──
+// ─────────────────────────────────────────────
+//  ツアー追加関連
+// ─────────────────────────────────────────────
+
+const TOUR_COLOR_PRESETS = [
+  { label:"レッド",    value:"#c0152a" },
+  { label:"ネイビー",  value:"#1a3a6b" },
+  { label:"パープル",  value:"#5a1a7a" },
+  { label:"ブラック",  value:"#1a1a1a" },
+  { label:"ゴールド",  value:"#8a6a10" },
+  { label:"ティール",  value:"#0a5a5a" },
+];
+
+// ビジュアルSVGをClaude APIで生成
+async function generateTourVisual(tourName, tourSub, color, userPrompt) {
+  const prompt = userPrompt
+    ? `以下の説明に基づいて、東方神起ライブツアー「${tourName}」のビジュアルヘッダーSVGを生成してください。
+説明：${userPrompt}
+テーマカラー：${color}`
+    : `東方神起ライブツアー「${tourName}」${tourSub ? `サブタイトル「${tourSub}」` : ""}のビジュアルヘッダーSVGを、テーマカラー${color}を基調に自動生成してください。`;
+
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 1000,
+      system: `あなたはSVGビジュアルデザイナーです。東方神起（TVXQ!）のライブツアーのヘッダービジュアルをSVGで生成してください。
+必ず以下の仕様に従ってください：
+- viewBox="0 0 400 110" のSVGを1つだけ出力
+- 幅400px、高さ110pxの横長ビジュアル
+- 指定テーマカラーを基調とした背景グラデーション
+- ツアー名を大きく中央に表示（Cormorant Garamond風の欧文スタイル）
+- 光・粒子・波・幾何学模様などの演出を加える
+- SVGタグのみを出力し、説明文や\`\`\`は一切含めない`,
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+  const data = await response.json();
+  const text = data.content?.find(b => b.type === "text")?.text || "";
+  const match = text.match(/<svg[\s\S]*<\/svg>/i);
+  return match ? match[0] : null;
+}
+
+function TourVisPreviewDialog({ tourName, tourSub, color, svgCode, onRetry, onConfirm, generating }) {
+  return (
+    <div className="preview-overlay" onClick={e => e.stopPropagation()}>
+      <div className="preview-dialog">
+        <div className="preview-vis-wrap">
+          {generating || !svgCode
+            ? <div className="preview-loading">
+                <div style={{width:32,height:32,border:"3px solid rgba(255,255,255,.2)",borderTopColor:color,borderRadius:"50%",animation:"spin .8s linear infinite"}}/>
+                <div style={{color:"rgba(255,255,255,.5)",fontSize:12}}>ビジュアル生成中…</div>
+              </div>
+            : <div dangerouslySetInnerHTML={{__html:svgCode}} style={{width:"100%",height:"100%"}}/>
+          }
+        </div>
+        <div className="preview-body">
+          <div className="preview-ttl">{tourName||"ツアー名未設定"}</div>
+          {tourSub && <div className="preview-sub">{tourSub}</div>}
+          <div className="preview-btns">
+            <button className="preview-retry" onClick={onRetry} disabled={generating}>🔄 やり直す</button>
+            <button className="preview-confirm" onClick={onConfirm} disabled={generating}>✓ これで追加する</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AddTourForm({ onClose, onSaveTour }) {
+  const [tourName,  setTourName]  = useState("");
+  const [tourSub,   setTourSub]   = useState("");
+  const [color,     setColor]     = useState("#c0152a");
+  const [visType,   setVisType]   = useState("auto"); // "auto" | "manual"
+  const [userPrompt,setUserPrompt]= useState("");
+  const [preview,   setPreview]   = useState(false);
+  const [svgCode,   setSvgCode]   = useState(null);
+  const [generating,setGenerating]= useState(false);
+  const [state,     setState]     = useState("idle");
+
+  const handleGenerate = async () => {
+    setPreview(true);
+    setSvgCode(null);
+    setGenerating(true);
+    try {
+      const svg = await generateTourVisual(tourName, tourSub, color, visType === "manual" ? userPrompt : null);
+      setSvgCode(svg);
+    } catch {
+      setSvgCode(null);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleConfirm = () => {
+    if (state !== "idle") return;
+    setState("saving");
+    onSaveTour({
+      tourId:    `tour-user-${Date.now()}`,
+      tourName:  tourName.trim() || "新しいツアー",
+      tourSub:   tourSub.trim() || null,
+      tourColor: color,
+      featured:  false,
+      svgCode:   svgCode,
+    });
+    setTimeout(() => { setState("done"); setTimeout(onClose, 600); }, 400);
+  };
+
+  return (
+    <>
+      {preview && (
+        <TourVisPreviewDialog
+          tourName={tourName} tourSub={tourSub} color={color}
+          svgCode={svgCode} generating={generating}
+          onRetry={handleGenerate}
+          onConfirm={handleConfirm}
+        />
+      )}
+      <div className="overlay" onClick={onClose}>
+        <div className="modal" onClick={e => e.stopPropagation()}>
+          <div className="modal-nav">
+            <div className="modal-handle"/>
+            <div className="modal-nav-btns">
+              <button className="nav-back" onClick={onClose}>ホームに戻る</button>
+            </div>
+          </div>
+          <div className="mhero dark"><div className="mdate">NEW TOUR</div><div className="mtitle">ツアーを追加する</div></div>
+
+          <div className="fsec">
+            <label className="flbl">ツアー名</label>
+            <input className="finp" placeholder="例: 東方神起 LIVE TOUR 2027" value={tourName} onChange={e=>setTourName(e.target.value)}/>
+          </div>
+          <div className="fsec">
+            <label className="flbl">サブタイトル（任意）</label>
+            <input className="finp" placeholder="例: 〜ANOTHER WORLD〜" value={tourSub} onChange={e=>setTourSub(e.target.value)}/>
+          </div>
+
+          <div className="fdivider">テーマカラー</div>
+          <div className="fsec">
+            <div className="color-presets">
+              {TOUR_COLOR_PRESETS.map(p => (
+                <div key={p.value} className={"color-preset"+(color===p.value?" selected":"")}
+                  style={{background:p.value}} title={p.label}
+                  onClick={() => setColor(p.value)}/>
+              ))}
+            </div>
+          </div>
+
+          <div className="fdivider">ビジュアルタイプ</div>
+          <div className="fsec">
+            <div className="vis-type-opts">
+              <div className={"vis-type-opt"+(visType==="auto"?" selected":"")} onClick={() => setVisType("auto")}>
+                <div className={"vis-type-radio"+(visType==="auto"?" selected":"")}/>
+                <div>
+                  <div className="vis-type-label">🎲 おまかせ</div>
+                  <div className="vis-type-sub">ツアー名・カラーを元にClaudeが自動でビジュアルを生成します</div>
+                </div>
+              </div>
+              <div className={"vis-type-opt"+(visType==="manual"?" selected":"")} onClick={() => setVisType("manual")}>
+                <div className={"vis-type-radio"+(visType==="manual"?" selected":"")}/>
+                <div style={{flex:1}}>
+                  <div className="vis-type-label">✍️ 自分で基調イメージを記述</div>
+                  <div className="vis-type-sub">イメージを言葉で伝えてClaudeに生成させます</div>
+                  {visType === "manual" && (
+                    <textarea className="finp" rows={3} style={{resize:"none",lineHeight:1.7,marginTop:10,fontSize:13}}
+                      placeholder="例：夜の海をイメージした深いネイビー。星が散りばめられていて、波の音が聞こえてきそうな幻想的な雰囲気"
+                      value={userPrompt} onChange={e=>setUserPrompt(e.target.value)}/>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <button className="save-btn" style={{marginBottom:24}}
+            onClick={handleGenerate}
+            disabled={generating}>
+            ✨ プレビューを生成する
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// 2択メニュー
+function AddMenu({ onClose, onSelectLive, onSelectTour }) {
+  return (
+    <div className="add-menu-overlay">
+      <div className="add-menu-bg" onClick={onClose}/>
+      <div className="add-menu">
+        <div className="add-menu-handle"/>
+        <div className="add-menu-ttl">追加する内容を選択</div>
+        <button className="add-menu-btn" onClick={onSelectLive}>
+          <span className="add-menu-icon">🎵</span>
+          <div>
+            <div className="add-menu-label">ライブを追加</div>
+            <div className="add-menu-desc">既存ツアーにライブ公演を追加します</div>
+          </div>
+        </button>
+        <button className="add-menu-btn" onClick={onSelectTour}>
+          <span className="add-menu-icon">📋</span>
+          <div>
+            <div className="add-menu-label">ツアーを追加</div>
+            <div className="add-menu-desc">新しいツアーを作成してライブを管理します</div>
+          </div>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // 新規追加用・保存してホームに戻るボタン（フィードバック付き）
 function AddSaveButton({ buildLive, tourName, onSaveAndClose }) {
   const [state, setState] = useState("idle");
@@ -1119,11 +1398,13 @@ function AddForm({ onClose, onSaveAndClose }) {
 // ─────────────────────────────────────────────
 
 export default function App() {
-  const [selected,  setSelected]  = useState(null);
-  const [showAdd,   setShowAdd]   = useState(false);
-  const [allLives,  setAllLives]  = useState([]);
-  const [loading,   setLoading]   = useState(true);
-  const [error,     setError]     = useState(null);
+  const [selected,    setSelected]    = useState(null);
+  const [showMenu,    setShowMenu]    = useState(false);
+  const [showAdd,     setShowAdd]     = useState(false);
+  const [showAddTour, setShowAddTour] = useState(false);
+  const [allLives,    setAllLives]    = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [error,       setError]       = useState(null);
 
   // 起動時にFirestoreからデータを取得
   useEffect(() => {
@@ -1157,6 +1438,7 @@ export default function App() {
           sub:      entry.tourSub,
           color:    entry.tourColor,
           featured: entry.featured,
+          svgCode:  entry.svgCode || null,
           lives:    [],
         });
       }
@@ -1192,6 +1474,31 @@ export default function App() {
   const handleLiveDelete = (liveId) => {
     const updated = allLives.filter(entry => entry.live.id !== liveId);
     persist(updated);
+  };
+
+  // ツアー削除（ツアー内の全ライブも削除）
+  const handleTourDelete = (tourId) => {
+    const updated = allLives.filter(entry => entry.tourId !== tourId);
+    persist(updated);
+  };
+
+  // ツアー新規追加（ライブ0件で作成）
+  const handleTourSave = (tourMeta) => {
+    // ダミーライブ1件を入れてツアーを成立させる（ライブ0件だとallToursに表示されない）
+    const dummyLive = {
+      id: `live-placeholder-${Date.now()}`,
+      date: "未設定", dateLabel: "未設定",
+      open: "", start: "", venue: "未設定",
+      seat: "未設定", highlight: null,
+      tag: "未", emoji: "🎤",
+      songs: [], photos: [],
+      memory: { before:"", after:"", highlight:"", other:"" },
+      tips: [],
+      isPlaceholder: true,
+    };
+    const entry = { ...tourMeta, live: dummyLive };
+    persist([...allLives, entry]);
+    setShowAddTour(false);
   };
   const handleUpdate = (liveId, changes) => {
     const updated = allLives.map(entry =>
@@ -1247,7 +1554,7 @@ export default function App() {
                 <div><div className="stat-n">{totalSongs}</div><div className="stat-l">SONGS</div></div>
                 <div><div className="stat-n">{allTours.length}</div><div className="stat-l">TOURS</div></div>
               </div>
-              <button className="add-btn" onClick={() => { setShowAdd(true); setSelected(null); }}>＋</button>
+              <button className="add-btn" onClick={() => { setShowMenu(true); setSelected(null); }}>＋</button>
             </div>
           </div>
         </div>
@@ -1255,8 +1562,9 @@ export default function App() {
           <div className="sec-lbl">ツアー</div>
           {allTours.map(tour => (
             <TourCard key={tour.id} tour={tour}
-              onLiveSelect={(live, tour) => { setSelected({ live, tour }); setShowAdd(false); }}
+              onLiveSelect={(live, tour) => { setSelected({ live, tour }); setShowMenu(false); }}
               onLiveDelete={handleLiveDelete}
+              onTourDelete={handleTourDelete}
             />
           ))}
         </div>
@@ -1268,10 +1576,23 @@ export default function App() {
             onUpdate={handleUpdate}
           />
         )}
+        {showMenu && (
+          <AddMenu
+            onClose={() => setShowMenu(false)}
+            onSelectLive={() => { setShowMenu(false); setShowAdd(true); }}
+            onSelectTour={() => { setShowMenu(false); setShowAddTour(true); }}
+          />
+        )}
         {showAdd && (
           <AddForm
             onClose={() => setShowAdd(false)}
             onSaveAndClose={(tourName, newLive) => { handleSave(tourName, newLive); setShowAdd(false); }}
+          />
+        )}
+        {showAddTour && (
+          <AddTourForm
+            onClose={() => setShowAddTour(false)}
+            onSaveTour={handleTourSave}
           />
         )}
       </div>
