@@ -1,7 +1,7 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
 // ─────────────────────────────────────────────
 //  Firebase 初期化
@@ -73,7 +73,6 @@ const TOURS = [
     id: "tour-20th",
     name: "東方神起 20th Anniversary LIVE IN NISSAN STADIUM",
     sub:  "〜RED OCEAN〜",
-    year: "2026",
     color: "#c0152a",
     featured: true,
     lives: [
@@ -195,7 +194,6 @@ const TOURS = [
   {
     id: "tour-zone",
     name: "東方神起 20th Anniversary LIVE TOUR ～ZONE～",
-    year: "2024–2025",
     color: "#1a4a6b",
     lives: [
       {
@@ -417,10 +415,10 @@ const CSS = `
   .mdate { font-family:"Cormorant Garamond",serif; font-style:italic; font-size:12px; color:rgba(255,255,255,.6); letter-spacing:.18em; margin-bottom:6px; }
   .mtitle { font-family:"Noto Serif JP",serif; font-size:17px; font-weight:600; color:#fff; line-height:1.5; }
   .msub { font-family:"Cormorant Garamond",serif; font-style:italic; font-size:13px; color:var(--gold-lt); letter-spacing:.1em; margin-top:4px; }
-  .mvenue { margin-top:9px; font-size:12px; color:rgba(255,255,255,.5); }
+  .mvenue { margin-top:9px; font-size:14px; color:rgba(255,255,255,.6); }
   .mtime-row { display:flex; gap:16px; margin-top:8px; }
-  .mtime { display:flex; gap:5px; font-size:11px; color:rgba(255,255,255,.45); align-items:center; }
-  .mtime b { color:rgba(255,255,255,.85); }
+  .mtime { display:flex; gap:5px; font-size:13px; color:rgba(255,255,255,.5); align-items:center; }
+  .mtime b { color:rgba(255,255,255,.9); }
   .edit-btn { background:var(--red); border:none; color:#fff; border-radius:10px; padding:11px 22px; font-size:15px; font-weight:500; cursor:pointer; white-space:nowrap; font-family:"Noto Sans JP",sans-serif; }
   .msec { padding:0 20px; margin-bottom:20px; }
   .msec-ttl { font-size:13px; letter-spacing:.15em; color:rgba(28,10,12,.5); text-transform:uppercase; margin-bottom:12px; display:flex; align-items:center; gap:8px; font-weight:600; }
@@ -437,7 +435,7 @@ const CSS = `
   .sl-enc { margin-left:auto; background:rgba(192,21,42,.1); color:var(--red); font-size:8px; padding:2px 8px; border-radius:10px; flex-shrink:0; }
 
   /* Seat map */
-  .seat-map { background:#1c0a0c; border-radius:12px; padding:16px; }
+  .seat-map { background:#1c0a0c; border-radius:12px; padding:10px; }
   .seat-info { text-align:center; margin-top:8px; font-size:11px; color:rgba(255,255,255,.45); }
   .seat-info strong { color:var(--gold-lt); font-family:"Cormorant Garamond",serif; font-size:14px; }
 
@@ -456,9 +454,8 @@ const CSS = `
   .mem-card { background:var(--offwhite); border-radius:12px; border:1px solid rgba(192,21,42,.08); overflow:hidden; }
   .mem-hdr { display:flex; align-items:center; gap:8px; padding:9px 14px; background:rgba(192,21,42,.04); border-bottom:1px solid rgba(192,21,42,.07); }
   .mem-icon { font-size:14px; }
-  .mem-lbl { font-size:9px; letter-spacing:.18em; text-transform:uppercase; color:rgba(28,10,12,.4); }
+  .mem-lbl { font-size:11px; letter-spacing:.15em; text-transform:uppercase; color:rgba(28,10,12,.45); }
   .mem-text { padding:12px 14px; font-size:14.5px; color:rgba(28,10,12,.72); line-height:1.85; font-family:"Noto Serif JP",serif; white-space:pre-line; text-align:left; }
-  .comment { background:var(--offwhite); border-radius:10px; padding:14px; border:1px solid rgba(192,21,42,.08); font-size:14.5px; color:rgba(28,10,12,.68); line-height:1.85; font-family:"Noto Serif JP",serif; white-space:pre-line; text-align:left; }
   .empty { color:rgba(28,10,12,.28); font-style:italic; }
 
   /* Tips */
@@ -479,12 +476,12 @@ const CSS = `
 
   /* Form */
   .fsec { padding:0 20px; margin-bottom:14px; }
-  .flbl { font-size:10px; letter-spacing:.15em; color:rgba(28,10,12,.4); text-transform:uppercase; margin-bottom:7px; display:flex; align-items:center; gap:5px; }
+  .flbl { font-size:12px; letter-spacing:.12em; color:rgba(28,10,12,.45); text-transform:uppercase; margin-bottom:7px; display:flex; align-items:center; gap:5px; }
   .finp { width:100%; background:var(--offwhite); border:1px solid rgba(192,21,42,.14); border-radius:10px; padding:12px 14px; font-size:14px; font-family:"Noto Sans JP",sans-serif; color:var(--ink); outline:none; transition:border .2s; }
   .finp:focus { border-color:var(--red); }
   .frow { display:flex; gap:10px; }
   .fgrp { flex:1; }
-  .fdivider { margin:4px 20px 14px; font-size:10px; letter-spacing:.2em; color:rgba(192,21,42,.5); text-transform:uppercase; padding-top:14px; border-top:1px solid rgba(192,21,42,.1); }
+  .fdivider { margin:4px 20px 14px; font-size:12px; letter-spacing:.15em; color:rgba(192,21,42,.65); text-transform:uppercase; padding-top:14px; border-top:1px solid rgba(192,21,42,.1); font-weight:600; }
   .save-btn { width:calc(100% - 40px); margin:10px 20px 0; background:linear-gradient(135deg,var(--red),var(--red-deep)); color:#fff; border:none; border-radius:12px; padding:16px; font-family:"Noto Serif JP",serif; font-size:15px; letter-spacing:.1em; cursor:pointer; transition:transform .1s, box-shadow .1s, background .2s; }
   .save-btn:active { transform:scale(.97); }
   .save-btn.saving { background:linear-gradient(135deg,#2a8a3e,#1a6b2e); box-shadow:0 0 0 3px rgba(42,138,62,.3); pointer-events:none; }
@@ -565,31 +562,18 @@ function PhotoEditor({ photos, onAdd, onRemove, uploading }) {
 // セクション順統一コンポーネント群
 // 順番：①セットリスト ②座席 ③写真 ④思い出メモ ⑤Tips
 
-function MemorySection({ memory, comment }) {
-  if (memory) {
-    return (
-      <div className="mem-list">
-        {MEM_FIELDS.map(({ key, icon, label }) => (
-          <div key={key} className="mem-card">
-            <div className="mem-hdr"><span className="mem-icon">{icon}</span><span className="mem-lbl">{label}</span></div>
-            <div className="mem-text">
-              {memory[key]
-                ? memory[key]
-                : <span className="empty">まだ記録されていません…</span>
-              }
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-  if (comment) return <div className="comment">{comment}</div>;
+function MemorySection({ memory }) {
   return (
     <div className="mem-list">
       {MEM_FIELDS.map(({ key, icon, label }) => (
         <div key={key} className="mem-card">
           <div className="mem-hdr"><span className="mem-icon">{icon}</span><span className="mem-lbl">{label}</span></div>
-          <div className="mem-text"><span className="empty">まだ記録されていません…</span></div>
+          <div className="mem-text">
+            {memory?.[key]
+              ? memory[key]
+              : <span className="empty">まだ記録されていません…</span>
+            }
+          </div>
         </div>
       ))}
     </div>
@@ -602,7 +586,7 @@ function TipItem({ tip }) {
     <div className="tip-item">
       <span className="tip-cat">{tip.cat}</span>
       <div style={{flex:1}}>
-        <span className="tip-text" dangerouslySetInnerHTML={{__html:tip.text}}/>
+        <div className="tip-text" dangerouslySetInnerHTML={{__html:tip.text}}/>
         {tip.url && (
           <div className="tip-url">
             <span className="tip-url-text">{tip.url}</span>
@@ -622,7 +606,7 @@ function TipsSection({ tips }) {
     <div className="tips-box">
       <div className="tips-hdr"><span className="tips-hdr-ic">📌</span><span className="tips-hdr-tt">Live を楽しむための Tips</span><span className="tips-badge">TIPS</span></div>
       {(!tips || tips.length === 0)
-        ? <div className="tip-item"><span className="tip-text" style={{color:"rgba(255,255,255,.28)",fontStyle:"italic"}}>まだ Tips が記録されていません…</span></div>
+        ? <div className="tip-item"><div className="tip-text" style={{color:"rgba(255,255,255,.28)",fontStyle:"italic"}}>まだ Tips が記録されていません…</div></div>
         : tips.map((tip, i) => <TipItem key={i} tip={tip}/>)
       }
     </div>
@@ -766,7 +750,7 @@ function StadiumMap({ highlight, seat }) {
   ];
   return (
     <div className="seat-map">
-      <svg viewBox="0 0 320 300" width="100%" style={{display:"block"}}>
+      <svg viewBox="0 0 320 300" width="100%" style={{display:"block", maxWidth:"240px", margin:"0 auto"}}>
         <ellipse cx="160" cy="148" rx="148" ry="132" fill="#0d0404" stroke="#3a1515" strokeWidth="2"/>
         <path d="M26 100 Q12 148 26 196 L52 186 Q40 148 52 110Z" fill={hl("W2F")||S2}/>
         <path d="M294 100 Q308 148 294 196 L268 186 Q280 148 268 110Z" fill={hl("E2F")||S2}/>
@@ -867,7 +851,7 @@ function LiveModal({ live:liveProp, tour, onClose, onUpdate }) {
         {/* ④思い出メモ */}
         <div className="msec">
           <div className="msec-ttl">思い出メモ</div>
-          <MemorySection memory={live.memory} comment={live.comment}/>
+          <MemorySection memory={live.memory}/>
         </div>
         {/* ⑤Tips */}
         <div className="msec">
@@ -1129,11 +1113,6 @@ export default function App() {
     persist([...allLives, entry]);
   };
 
-  const handleSaveAndClose = (tourName, newLive) => {
-    handleSave(tourName, newLive);
-    setShowAdd(false);
-  };
-
   // 既存ライブの編集保存
   const handleUpdate = (liveId, changes) => {
     const updated = allLives.map(entry =>
@@ -1212,7 +1191,7 @@ export default function App() {
           <AddForm
             onClose={() => setShowAdd(false)}
             onSave={handleSave}
-            onSaveAndClose={handleSaveAndClose}
+            onSaveAndClose={(tourName, newLive) => { handleSave(tourName, newLive); setShowAdd(false); }}
           />
         )}
       </div>
