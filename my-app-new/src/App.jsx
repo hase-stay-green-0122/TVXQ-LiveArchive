@@ -750,6 +750,7 @@ function TourCard({ tour, onLiveSelect, onLiveDelete, onTourDelete }) {
           onConfirm={() => { onTourDelete(tour.id); setDelTour(false); }}
         />
       )}
+      {delTarget && (
         <DeleteDialog
           live={delTarget}
           onCancel={() => setDelTarget(null)}
@@ -1096,7 +1097,7 @@ async function generateTourVisual(tourName, tourSub, color, userPrompt) {
 - 指定テーマカラーを基調とした背景グラデーション
 - ツアー名を大きく中央に表示（Cormorant Garamond風の欧文スタイル）
 - 光・粒子・波・幾何学模様などの演出を加える
-- SVGタグのみを出力し、説明文や\`\`\`は一切含めない`,
+- SVGタグのみを出力し、説明文やコードブロック記号は一切含めない`,
       messages: [{ role: "user", content: prompt }],
     }),
   });
