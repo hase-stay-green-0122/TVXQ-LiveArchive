@@ -873,18 +873,20 @@ function AddForm({ onClose, onSave, onSaveAndClose }) {
   const { photos, handleAdd, handleRemove } = usePhotoUpload([]);
 
   const buildLive = () => {
-    if (!tourName.trim()||!date||!venue.trim()) { alert("ツアー名・日付・会場は必須です"); return null; }
     const songs = setlist.split("\n").map(l=>l.trim()).filter(Boolean).map((line,i) => {
       const e = /アンコール/i.test(line);
       const t = line.replace(/^\d+\.\s*/,"").replace(/\s*[\[［]アンコール[\]］]/i,"");
       return { n:i+1, t, ...(e?{e:true}:{}) };
     });
-    const [y,m,d] = date.split("-");
+    const dateParts = date ? date.split("-") : ["","",""];
+    const [y,m,d] = dateParts;
+    const dateStr = date ? `${y}.${m}.${d}` : "日付未設定";
+    const dateLabelStr = date ? `${y}年${parseInt(m)}月${parseInt(d)}日` : "日付未設定";
     return {
-      id:`user-${Date.now()}`, date:`${y}.${m}.${d}`, dateLabel:`${y}年${parseInt(m)}月${parseInt(d)}日`,
-      start:startTime, venue:venue.trim(),
+      id:`user-${Date.now()}`, date:dateStr, dateLabel:dateLabelStr,
+      start:startTime, venue:venue.trim()||"会場未設定",
       seat:[block,seatNo].filter(Boolean).join(" / 座席")||"未設定",
-      highlight:null, tag:venue.trim().slice(0,3), emoji:"🎤",
+      highlight:null, tag:(venue.trim()||"未設定").slice(0,3), emoji:"🎤",
       songs, photos,
       memory:{ before:mem.before.trim(), after:mem.after.trim(), highlight:mem.highlight.trim(), other:mem.other.trim() },
       tips:parseTips(tipsText),
@@ -904,17 +906,17 @@ function AddForm({ onClose, onSave, onSaveAndClose }) {
         <div className="mhero red"><div className="mdate">NEW ENTRY</div><div className="mtitle">ライブを記録する</div></div>
         {/* 基本情報 */}
         <div className="fsec">
-          <label className="flbl">ツアー・公演名 *</label>
+          <label className="flbl">ツアー・公演名</label>
           <input className="finp" placeholder="例: TVXQ! WORLD TOUR — CIRCLE" value={tourName} onChange={e=>setTourName(e.target.value)}/>
         </div>
         <div className="fsec">
           <div className="frow">
-            <div className="fgrp"><label className="flbl">開催日 *</label><input className="finp" type="date" value={date} onChange={e=>setDate(e.target.value)}/></div>
+            <div className="fgrp"><label className="flbl">開催日</label><input className="finp" type="date" value={date} onChange={e=>setDate(e.target.value)}/></div>
             <div className="fgrp"><label className="flbl">開演時刻</label><input className="finp" type="time" value={startTime} onChange={e=>setStartTime(e.target.value)}/></div>
           </div>
         </div>
         <div className="fsec">
-          <label className="flbl">会場 *</label>
+          <label className="flbl">会場</label>
           <input className="finp" placeholder="例: 東京ドーム" value={venue} onChange={e=>setVenue(e.target.value)}/>
         </div>
         {/* ①セットリスト */}
@@ -939,8 +941,8 @@ function AddForm({ onClose, onSave, onSaveAndClose }) {
         {/* ⑤Tips */}
         <div className="fdivider">Live を楽しむための Tips</div>
         <TipsInput value={tipsText} onChange={e=>setTipsText(e.target.value)}/>
-        <button className="save-btn"    onClick={() => { const l=buildLive(); if(l){ onSave(tourName.trim(),l); reset(); } }}>記録を保存する（続けて入力）</button>
-        <button className="outline-btn" onClick={() => { const l=buildLive(); if(l){ onSaveAndClose(tourName.trim(),l); } }}>保存して閉じる</button>
+        <button className="save-btn"    onClick={() => { const l=buildLive(); onSave(tourName.trim()||"未設定",l); reset(); }}>記録を保存する（続けて入力）</button>
+        <button className="outline-btn" onClick={() => { const l=buildLive(); onSaveAndClose(tourName.trim()||"未設定",l); }}>保存して閉じる</button>
       </div>
     </div>
   );
