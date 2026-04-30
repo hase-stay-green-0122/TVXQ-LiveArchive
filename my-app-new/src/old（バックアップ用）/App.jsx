@@ -390,22 +390,9 @@ const CSS = `
 
   /* Lives list */
   .lives-list { border-top:1px solid rgba(255,255,255,.06); }
-  .live-item { display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid rgba(255,255,255,.04); cursor:pointer; position:relative; }
+  .live-item { display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid rgba(255,255,255,.04); cursor:pointer; }
   .live-item:last-child { border-bottom:none; }
   .live-item:active { background:rgba(255,255,255,.05); }
-  .live-del-wrap { position:relative; flex-shrink:0; }
-  .live-del { background:rgba(192,21,42,.15); border:1px solid rgba(192,21,42,.3); color:rgba(255,100,100,.8); border-radius:50%; width:28px; height:28px; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:background .15s; }
-  .live-del:hover { background:rgba(192,21,42,.45); color:#fff; }
-  .live-del-tip { position:absolute; right:36px; top:50%; transform:translateY(-50%); background:rgba(28,10,12,.92); color:#fff; font-size:11px; padding:4px 10px; border-radius:6px; white-space:nowrap; pointer-events:none; opacity:0; transition:opacity .15s; }
-  .live-del-wrap:hover .live-del-tip { opacity:1; }
-  .del-dialog-overlay { position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:200; display:flex; align-items:center; justify-content:center; padding:24px; }
-  .del-dialog { background:var(--paper); border-radius:16px; padding:24px 22px; width:100%; max-width:320px; box-shadow:0 8px 32px rgba(0,0,0,.3); }
-  .del-dialog-ttl { font-family:"Noto Serif JP",serif; font-size:16px; font-weight:600; color:var(--ink); margin-bottom:8px; }
-  .del-dialog-body { font-size:13px; color:rgba(28,10,12,.6); line-height:1.7; margin-bottom:20px; }
-  .del-dialog-body strong { color:var(--ink); }
-  .del-dialog-btns { display:flex; gap:10px; }
-  .del-dialog-cancel { flex:1; background:transparent; border:1.5px solid rgba(28,10,12,.2); color:rgba(28,10,12,.6); border-radius:10px; padding:12px; font-size:14px; cursor:pointer; font-family:"Noto Sans JP",sans-serif; }
-  .del-dialog-confirm { flex:1; background:var(--red); border:none; color:#fff; border-radius:10px; padding:12px; font-size:14px; cursor:pointer; font-family:"Noto Sans JP",sans-serif; font-weight:600; }
   .live-item-emoji { font-size:22px; flex-shrink:0; }
   .live-item-info { flex:1; min-width:0; }
   .live-item-date { font-family:"Cormorant Garamond",serif; font-size:11px; color:rgba(232,17,45,.8); letter-spacing:.12em; margin-bottom:2px; }
@@ -672,37 +659,12 @@ function Silhouette() {
   return <img className="hdr-silhouette" src={SILHOUETTE_IMG} alt="" style={{height:"95px",width:"auto",objectFit:"contain"}}/>;
 }
 
-function DeleteDialog({ live, onCancel, onConfirm }) {
-  return (
-    <div className="del-dialog-overlay" onClick={onCancel}>
-      <div className="del-dialog" onClick={e => e.stopPropagation()}>
-        <div className="del-dialog-ttl">ライブを削除しますか？</div>
-        <div className="del-dialog-body">
-          <strong>{live.date} {live.venue}</strong> の記録を削除します。<br/>この操作は元に戻せません。
-        </div>
-        <div className="del-dialog-btns">
-          <button className="del-dialog-cancel" onClick={onCancel}>キャンセル</button>
-          <button className="del-dialog-confirm" onClick={onConfirm}>削除する</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function TourCard({ tour, onLiveSelect, onLiveDelete }) {
+function TourCard({ tour, onLiveSelect }) {
   const [open, setOpen] = useState(false);
-  const [delTarget, setDelTarget] = useState(null);
   const totalSongs = tour.lives.reduce((s,l) => s+l.songs.length, 0);
   const ROD = ["#e8112d","#c0152a","#ff3355","#d42035","#ff1a40","#b00d22"];
   return (
     <div className="tour-card">
-      {delTarget && (
-        <DeleteDialog
-          live={delTarget}
-          onCancel={() => setDelTarget(null)}
-          onConfirm={() => { onLiveDelete(delTarget.id); setDelTarget(null); }}
-        />
-      )}
       {tour.id === "tour-20th" && (
         <div className="red-vis" onClick={() => setOpen(o=>!o)}>
           <div className="red-wm"><span>RED OCEAN</span></div>
@@ -751,10 +713,7 @@ function TourCard({ tour, onLiveSelect, onLiveDelete }) {
                 <div className="live-item-venue">{live.venue}</div>
                 <div className="live-item-seat">{live.seat.split(" / ")[0]}</div>
               </div>
-              <div className="live-del-wrap" onClick={e => { e.stopPropagation(); setDelTarget(live); }}>
-                <div className="live-del-tip">削除する</div>
-                <button className="live-del">×</button>
-              </div>
+              <div className="live-item-arrow">›</div>
             </div>
           ))}
         </div>
@@ -1188,11 +1147,7 @@ export default function App() {
     persist([...allLives, entry]);
   };
 
-  // ライブ削除
-  const handleLiveDelete = (liveId) => {
-    const updated = allLives.filter(entry => entry.live.id !== liveId);
-    persist(updated);
-  };
+  // 既存ライブの編集保存
   const handleUpdate = (liveId, changes) => {
     const updated = allLives.map(entry =>
       entry.live.id === liveId
@@ -1255,9 +1210,7 @@ export default function App() {
           <div className="sec-lbl">ツアー</div>
           {allTours.map(tour => (
             <TourCard key={tour.id} tour={tour}
-              onLiveSelect={(live, tour) => { setSelected({ live, tour }); setShowAdd(false); }}
-              onLiveDelete={handleLiveDelete}
-            />
+              onLiveSelect={(live, tour) => { setSelected({ live, tour }); setShowAdd(false); }}/>
           ))}
         </div>
         {selected && (
