@@ -389,7 +389,10 @@ const CSS = `
   /* Modal */
   .overlay { position:fixed; inset:0; background:rgba(28,10,12,.78); z-index:100; display:flex; align-items:flex-end; backdrop-filter:blur(5px); }
   .modal { background:var(--paper); border-radius:24px 24px 0 0; width:100%; max-height:92vh; overflow-y:auto; padding:0 0 44px; }
-  .modal-handle { width:36px; height:4px; background:rgba(192,21,42,.18); border-radius:2px; margin:14px auto 0; }
+  .modal-nav { display:flex; align-items:center; justify-content:space-between; padding:14px 18px 0; }
+  .nav-back { display:flex; align-items:center; gap:5px; background:none; border:none; color:var(--red); font-size:14px; font-family:"Noto Sans JP",sans-serif; cursor:pointer; padding:4px 0; }
+  .nav-back::before { content:"‹"; font-size:20px; line-height:1; }
+  .nav-right { display:flex; gap:8px; align-items:center; }
   .mhero { padding:24px 24px 20px; margin-bottom:20px; position:relative; overflow:hidden; }
   .mhero.red { background:linear-gradient(140deg,var(--red-deep),var(--red)); }
   .mhero.red::after { content:"RED OCEAN"; position:absolute; bottom:-14px; right:-4px; font-family:"Cormorant Garamond",serif; font-size:50px; font-weight:300; color:rgba(255,255,255,.05); white-space:nowrap; pointer-events:none; }
@@ -437,8 +440,8 @@ const CSS = `
   .mem-hdr { display:flex; align-items:center; gap:8px; padding:9px 14px; background:rgba(192,21,42,.04); border-bottom:1px solid rgba(192,21,42,.07); }
   .mem-icon { font-size:14px; }
   .mem-lbl { font-size:9px; letter-spacing:.18em; text-transform:uppercase; color:rgba(28,10,12,.4); }
-  .mem-text { padding:12px 14px; font-size:13px; color:rgba(28,10,12,.72); line-height:1.85; font-family:"Noto Serif JP",serif; white-space:pre-line; }
-  .comment { background:var(--offwhite); border-radius:10px; padding:14px; border:1px solid rgba(192,21,42,.08); font-size:13px; color:rgba(28,10,12,.68); line-height:1.85; font-family:"Noto Serif JP",serif; white-space:pre-line; }
+  .mem-text { padding:12px 14px; font-size:14.5px; color:rgba(28,10,12,.72); line-height:1.85; font-family:"Noto Serif JP",serif; white-space:pre-line; text-align:left; }
+  .comment { background:var(--offwhite); border-radius:10px; padding:14px; border:1px solid rgba(192,21,42,.08); font-size:14.5px; color:rgba(28,10,12,.68); line-height:1.85; font-family:"Noto Serif JP",serif; white-space:pre-line; text-align:left; }
   .empty { color:rgba(28,10,12,.28); font-style:italic; }
 
   /* Tips */
@@ -450,7 +453,7 @@ const CSS = `
   .tip-item { display:flex; align-items:flex-start; gap:10px; padding:9px 16px; border-bottom:1px solid rgba(255,255,255,.04); }
   .tip-item:last-child { border-bottom:none; }
   .tip-cat { flex-shrink:0; background:rgba(192,21,42,.25); border-radius:6px; padding:3px 8px; font-size:8px; color:rgba(255,255,255,.7); margin-top:1px; white-space:nowrap; }
-  .tip-text { font-size:12px; color:rgba(255,255,255,.75); line-height:1.7; }
+  .tip-text { font-size:13.5px; color:rgba(255,255,255,.75); line-height:1.7; text-align:left; }
   .tip-text strong { color:var(--gold-lt); font-weight:600; }
   .tip-url { display:flex; align-items:center; gap:6px; margin-top:6px; }
   .tip-url-text { font-size:10px; color:rgba(100,160,255,.7); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; }
@@ -782,16 +785,19 @@ function LiveModal({ live:liveProp, tour, onClose, onUpdate }) {
     <div className="overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()}>
         <div className="modal-handle"/>
-        <div className={"mhero "+(isFeatured?"red":"dark")}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-            <div>
-              <div className="mdate">{live.dateLabel||live.date}</div>
-              <div className="mtitle">{tour.name}</div>
-              {tour.sub && <div className="msub">{tour.sub}</div>}
-              <div className="mvenue">📍 {live.venue}</div>
-              {live.open && <div className="mtime-row"><div className="mtime">開場 <b>{live.open}</b></div><div className="mtime">開演 <b>{live.start}</b></div></div>}
-            </div>
+        <div className="modal-nav">
+          <button className="nav-back" onClick={onClose}>ホームに戻る</button>
+          <div className="nav-right">
             <button className="edit-btn" onClick={() => setEditing(true)}>✏️ 編集</button>
+          </div>
+        </div>
+        <div className={"mhero "+(isFeatured?"red":"dark")} style={{marginTop:10}}>
+          <div>
+            <div className="mdate">{live.dateLabel||live.date}</div>
+            <div className="mtitle">{tour.name}</div>
+            {tour.sub && <div className="msub">{tour.sub}</div>}
+            <div className="mvenue">📍 {live.venue}</div>
+            {live.open && <div className="mtime-row"><div className="mtime">開場 <b>{live.open}</b></div><div className="mtime">開演 <b>{live.start}</b></div></div>}
           </div>
         </div>
         {/* ①セットリスト */}
@@ -854,7 +860,10 @@ function EditForm({ live, onClose, onGoHome, onUpdate }) {
     <div className="overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()}>
         <div className="modal-handle"/>
-        <div className="mhero dark">
+        <div className="modal-nav">
+          <button className="nav-back" onClick={onClose}>詳細に戻る</button>
+        </div>
+        <div className="mhero dark" style={{marginTop:10}}>
           <div className="mdate">EDIT</div>
           <div className="mtitle">{live.dateLabel||live.date}</div>
           <div className="mvenue">📍 {live.venue}</div>
@@ -930,7 +939,10 @@ function AddForm({ onClose, onSave, onSaveAndClose }) {
     <div className="overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()}>
         <div className="modal-handle"/>
-        <div className="mhero red"><div className="mdate">NEW ENTRY</div><div className="mtitle">ライブを記録する</div></div>
+        <div className="modal-nav">
+          <button className="nav-back" onClick={onClose}>ホームに戻る</button>
+        </div>
+        <div className="mhero red" style={{marginTop:10}}><div className="mdate">NEW ENTRY</div><div className="mtitle">ライブを記録する</div></div>
         {/* 基本情報 */}
         <div className="fsec">
           <label className="flbl">ツアー・公演名</label>
