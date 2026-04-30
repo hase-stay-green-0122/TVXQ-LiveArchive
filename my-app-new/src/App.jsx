@@ -738,13 +738,13 @@ function LiveModal({ live:liveProp, tour, onClose, onUpdate }) {
             ))}
           </div>
         </div>
-        {live.tips&&live.tips.length>0&&(
-          <div className="msec"><div className="msec-ttl">現地お役立ち情報</div><TipsView tips={live.tips}/></div>
-        )}
         <div className="msec">
           <div className="msec-ttl">思い出メモ</div>
           <MemoryView memory={live.memory} comment={live.comment}/>
         </div>
+        {live.tips&&live.tips.length>0&&(
+          <div className="msec"><div className="msec-ttl">Live を楽しむための Tips</div><TipsView tips={live.tips}/></div>
+        )}
       </div>
     </div>
   );
@@ -802,15 +802,17 @@ function AddForm({ onClose, onSave, onSaveAndClose }) {
         </div>
         <div className="fsec"><label className="flbl">会場 *</label><input className="finp" placeholder="例: 東京ドーム" value={venue} onChange={e=>setVenue(e.target.value)}/></div>
         <div className="fsec">
+          <label className="flbl">セットリスト（1曲ずつ改行）</label>
+          <textarea className="finp" rows={5} placeholder={"1. Mirotic\n2. Rising Sun\n3. Before U Go  [アンコール]"} style={{resize:"none",lineHeight:1.8}} value={setlist} onChange={e=>setSetlist(e.target.value)}/>
+        </div>
+        <div className="fsec">
           <div className="frow">
             <div className="fgrp"><label className="flbl">ブロック / 列</label><input className="finp" placeholder="C列 12番" value={block} onChange={e=>setBlock(e.target.value)}/></div>
             <div className="fgrp"><label className="flbl">座席番号</label><input className="finp" placeholder="34" value={seatNo} onChange={e=>setSeatNo(e.target.value)}/></div>
           </div>
         </div>
-        <div className="fsec">
-          <label className="flbl">セットリスト（1曲ずつ改行）</label>
-          <textarea className="finp" rows={5} placeholder={"1. Mirotic\n2. Rising Sun\n3. Before U Go  [アンコール]"} style={{resize:"none",lineHeight:1.8}} value={setlist} onChange={e=>setSetlist(e.target.value)}/>
-        </div>
+        <div className="fdivider">写真</div>
+        <PhotoEditor photos={photos} onAdd={handleAdd} onRemove={handleRemove}/>
         <div className="fdivider">思い出メモ</div>
         {MEM_FIELDS.map(({key,icon,label})=>(
           <div key={key} className="fsec">
@@ -821,8 +823,6 @@ function AddForm({ onClose, onSave, onSaveAndClose }) {
             />
           </div>
         ))}
-        <div className="fdivider">写真</div>
-        <PhotoEditor photos={photos} onAdd={handleAdd} onRemove={handleRemove}/>
         <button className="save-btn" onClick={()=>{const l=buildLive();if(l){onSave(tourName.trim(),l);reset();}}}>記録を保存する（続けて入力）</button>
         <button className="outline-btn" onClick={()=>{const l=buildLive();if(l){onSaveAndClose(tourName.trim(),l);}}}>保存して閉じる</button>
       </div>
