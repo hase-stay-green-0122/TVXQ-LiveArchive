@@ -280,9 +280,30 @@ const TOURS = [
 //  ローカルストレージ
 // ─────────────────────────────────────────────
 
-const LS_KEY = "tvxq_user_lives";
-const loadUserLives = () => { try { return JSON.parse(localStorage.getItem(LS_KEY)||"[]"); } catch { return []; } };
-const saveUserLives = (d) => { try { localStorage.setItem(LS_KEY,JSON.stringify(d)); } catch {} };
+const LS_KEY = "tvxq_all_lives_v2";
+
+// TOURS定数から全ライブをフラットな {tourId, tourName, tourSub, tourColor, featured, live} 配列に展開
+const buildInitialAllLives = () =>
+  TOURS.flatMap(t => t.lives.map(l => ({
+    tourId:    t.id,
+    tourName:  t.name,
+    tourSub:   t.sub || null,
+    tourColor: t.color,
+    featured:  !!t.featured,
+    live:      l,
+  })));
+
+const loadAllLives = () => {
+  try {
+    const saved = localStorage.getItem(LS_KEY);
+    if (saved) return JSON.parse(saved);
+  } catch {}
+  return buildInitialAllLives();
+};
+
+const saveAllLives = (d) => {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(d)); } catch {}
+};
 
 // ─────────────────────────────────────────────
 //  スタイル
@@ -743,12 +764,18 @@ function LiveModal({ live:liveProp, tour, onClose, onUpdate }) {
   const [live, setLive] = useState(liveProp);
 
   const handleUpdate = (id, changes) => {
-    setLive(prev => ({...prev, ...changes}));
-    onUpdate(id, changes);
+    const merged = { ...live, ...changes };
+    setLive(merged);       // モーダル内の表示を即時更新
+    onUpdate(id, changes); // 親(App)のallLivesとlocalStorageに保存
   };
 
   if (editing) return (
-    <EditForm live={live} onClose={() => setEditing(false)} onGoHome={onClose} onUpdate={handleUpdate}/>
+    <EditForm
+      live={live}
+      onClose={() => setEditing(false)}
+      onGoHome={onClose}
+      onUpdate={handleUpdate}
+    />
   );
 
   return (
@@ -852,8 +879,8 @@ function EditForm({ live, onClose, onGoHome, onUpdate }) {
         {/* ⑤Tips */}
         <div className="fdivider">Live を楽しむための Tips</div>
         <TipsInput value={tipsText} onChange={e=>setTipsText(e.target.value)}/>
-        <button className="save-btn"   onClick={() => { doSave(); onClose();   }}>変更を保存する</button>
-        <button className="outline-btn" onClick={() => { doSave(); onGoHome(); }}>保存してホームに戻る</button>
+        <button className="save-btn"    onClick={() => { doSave(); onClose();   }}>✓ 保存して詳細に戻る</button>
+        <button className="outline-btn" onClick={() => { doSave(); onGoHome(); }}>🏠 保存してホームに戻る</button>
       </div>
     </div>
   );
@@ -953,37 +980,68 @@ function AddForm({ onClose, onSave, onSaveAndClose }) {
 // ─────────────────────────────────────────────
 
 export default function App() {
-  const [selected,  setSelected]  = useState(null);
+  const [selected,  setSelected]  = useState(null); // { entry, tour }
   const [showAdd,   setShowAdd]   = useState(false);
-  const [userLives, setUserLives] = useState(() => loadUserLives());
+  const [allLives,  setAllLives]  = useState(() => loadAllLives());
 
+  // allLives（フラット配列）からツアーカード用の構造を組み立てる
   const allTours = useMemo(() => {
-    if (userLives.length === 0) return TOURS;
-    const map = new Map(TOURS.map(t => [t.name, {...t, lives:[...t.lives]}]));
-    userLives.forEach(ul => {
-      if (map.has(ul.tourName)) map.get(ul.tourName).lives.push(ul.live);
-      else map.set(ul.tourName, {id:`tour-user-${ul.tourName}`,name:ul.tourName,year:ul.live.date.slice(0,4),color:"#8b0d1c",lives:[ul.live]});
+    const map = new Map();
+    allLives.forEach(entry => {
+      if (!map.has(entry.tourId)) {
+        map.set(entry.tourId, {
+          id:       entry.tourId,
+          name:     entry.tourName,
+          sub:      entry.tourSub,
+          color:    entry.tourColor,
+          featured: entry.featured,
+          lives:    [],
+        });
+      }
+      map.get(entry.tourId).lives.push(entry.live);
     });
     return Array.from(map.values());
-  }, [userLives]);
+  }, [allLives]);
 
-  const totalLives = allTours.reduce((s,t) => s+t.lives.length, 0);
-  const totalSongs = allTours.reduce((s,t) => s+t.lives.reduce((ss,l)=>ss+l.songs.length,0), 0);
+  const totalLives = allTours.reduce((s,t) => s + t.lives.length, 0);
+  const totalSongs = allTours.reduce((s,t) => s + t.lives.reduce((ss,l) => ss + l.songs.length, 0), 0);
 
+  // 新規ライブ追加
   const handleSave = (tourName, newLive) => {
-    const updated = [...userLives, {tourName, live:newLive}];
-    setUserLives(updated); saveUserLives(updated);
+    const tourId = `tour-user-${tourName}`;
+    // 同名ツアーが既存の場合はそのtourIdを使う
+    const existing = allLives.find(e => e.tourName === tourName);
+    const entry = {
+      tourId:    existing ? existing.tourId : tourId,
+      tourName:  tourName,
+      tourSub:   null,
+      tourColor: existing ? existing.tourColor : "#8b0d1c",
+      featured:  false,
+      live:      newLive,
+    };
+    const updated = [...allLives, entry];
+    setAllLives(updated);
+    saveAllLives(updated);
   };
 
   const handleSaveAndClose = (tourName, newLive) => {
-    handleSave(tourName, newLive); setShowAdd(false);
+    handleSave(tourName, newLive);
+    setShowAdd(false);
   };
 
+  // 既存ライブの編集保存 — liveIdで確実に対象を特定して上書き
   const handleUpdate = (liveId, changes) => {
-    const updated = userLives.map(ul => ul.live.id===liveId ? {...ul, live:{...ul.live,...changes}} : ul);
-    setUserLives(updated); saveUserLives(updated);
-    if (selected && selected.live.id===liveId)
-      setSelected(prev => ({...prev, live:{...prev.live,...changes}}));
+    const updated = allLives.map(entry =>
+      entry.live.id === liveId
+        ? { ...entry, live: { ...entry.live, ...changes } }
+        : entry
+    );
+    setAllLives(updated);
+    saveAllLives(updated);
+    // モーダル表示中のデータも即時反映
+    if (selected && selected.live.id === liveId) {
+      setSelected(prev => ({ ...prev, live: { ...prev.live, ...changes } }));
+    }
   };
 
   return (
@@ -1017,11 +1075,24 @@ export default function App() {
           <div className="sec-lbl">ツアー</div>
           {allTours.map(tour => (
             <TourCard key={tour.id} tour={tour}
-              onLiveSelect={(live,tour) => { setSelected({live,tour}); setShowAdd(false); }}/>
+              onLiveSelect={(live, tour) => { setSelected({ live, tour }); setShowAdd(false); }}/>
           ))}
         </div>
-        {selected && <LiveModal live={selected.live} tour={selected.tour} onClose={() => setSelected(null)} onUpdate={handleUpdate}/>}
-        {showAdd   && <AddForm  onClose={() => setShowAdd(false)} onSave={handleSave} onSaveAndClose={handleSaveAndClose}/>}
+        {selected && (
+          <LiveModal
+            live={selected.live}
+            tour={selected.tour}
+            onClose={() => setSelected(null)}
+            onUpdate={handleUpdate}
+          />
+        )}
+        {showAdd && (
+          <AddForm
+            onClose={() => setShowAdd(false)}
+            onSave={handleSave}
+            onSaveAndClose={handleSaveAndClose}
+          />
+        )}
       </div>
     </>
   );
