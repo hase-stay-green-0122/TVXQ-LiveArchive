@@ -405,9 +405,9 @@ const CSS = `
   /* Modal */
   .overlay { position:fixed; inset:0; background:rgba(28,10,12,.78); z-index:100; display:flex; align-items:flex-end; backdrop-filter:blur(5px); }
   .modal { background:var(--paper); border-radius:24px 24px 0 0; width:100%; max-height:92vh; overflow-y:auto; padding:0 0 44px; }
-  .modal-nav { display:flex; align-items:center; justify-content:space-between; padding:14px 18px 0; }
-  .nav-back { display:flex; align-items:center; gap:5px; background:none; border:none; color:var(--red); font-size:14px; font-family:"Noto Sans JP",sans-serif; cursor:pointer; padding:4px 0; }
-  .nav-back::before { content:"‹"; font-size:20px; line-height:1; }
+  .modal-nav { display:flex; align-items:center; justify-content:space-between; padding:16px 18px 0; }
+  .nav-back { display:flex; align-items:center; gap:4px; background:rgba(192,21,42,.08); border:1.5px solid rgba(192,21,42,.2); color:var(--red); font-size:15px; font-family:"Noto Sans JP",sans-serif; cursor:pointer; padding:11px 18px; border-radius:10px; font-weight:500; }
+  .nav-back::before { content:"‹"; font-size:22px; line-height:1; margin-right:2px; }
   .nav-right { display:flex; gap:8px; align-items:center; }
   .mhero { padding:24px 24px 20px; margin-bottom:20px; position:relative; overflow:hidden; }
   .mhero.red { background:linear-gradient(140deg,var(--red-deep),var(--red)); }
@@ -421,19 +421,19 @@ const CSS = `
   .mtime-row { display:flex; gap:16px; margin-top:8px; }
   .mtime { display:flex; gap:5px; font-size:11px; color:rgba(255,255,255,.45); align-items:center; }
   .mtime b { color:rgba(255,255,255,.85); }
-  .edit-btn { background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.35); color:#fff; border-radius:8px; padding:6px 12px; font-size:11px; cursor:pointer; white-space:nowrap; margin-left:12px; flex-shrink:0; }
+  .edit-btn { background:var(--red); border:none; color:#fff; border-radius:10px; padding:11px 22px; font-size:15px; font-weight:500; cursor:pointer; white-space:nowrap; font-family:"Noto Sans JP",sans-serif; }
   .msec { padding:0 20px; margin-bottom:20px; }
-  .msec-ttl { font-size:10px; letter-spacing:.2em; color:rgba(28,10,12,.38); text-transform:uppercase; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+  .msec-ttl { font-size:13px; letter-spacing:.15em; color:rgba(28,10,12,.5); text-transform:uppercase; margin-bottom:12px; display:flex; align-items:center; gap:8px; font-weight:600; }
   .msec-ttl::after { content:""; flex:1; height:1px; background:rgba(192,21,42,.12); }
 
   /* Setlist */
   .setlist { list-style:none; }
   .enc-div { display:flex; align-items:center; gap:10px; margin:12px 0 6px; }
   .enc-line { flex:1; height:1px; background:rgba(192,21,42,.15); }
-  .enc-lbl { font-size:9px; letter-spacing:.2em; color:var(--red); text-transform:uppercase; white-space:nowrap; }
-  .sl-item { display:flex; align-items:center; padding:8px 0; border-bottom:1px solid rgba(192,21,42,.06); gap:12px; }
-  .sl-num { font-family:"Cormorant Garamond",serif; font-size:15px; color:rgba(192,21,42,.35); width:22px; text-align:right; flex-shrink:0; }
-  .sl-name { font-size:13px; color:var(--ink); line-height:1.3; flex:1; }
+  .enc-lbl { font-size:11px; letter-spacing:.2em; color:var(--red); text-transform:uppercase; white-space:nowrap; }
+  .sl-item { display:flex; align-items:center; padding:10px 0; border-bottom:1px solid rgba(192,21,42,.06); gap:12px; }
+  .sl-num { font-family:"Cormorant Garamond",serif; font-size:17px; color:rgba(192,21,42,.4); width:24px; text-align:right; flex-shrink:0; }
+  .sl-name { font-size:16px; color:var(--ink); line-height:1.4; flex:1; text-align:left; }
   .sl-enc { margin-left:auto; background:rgba(192,21,42,.1); color:var(--red); font-size:8px; padding:2px 8px; border-radius:10px; flex-shrink:0; }
 
   /* Seat map */
@@ -465,12 +465,12 @@ const CSS = `
   .tips-box { background:linear-gradient(135deg,#1c0a0c,#2a0d10); border-radius:12px; overflow:hidden; }
   .tips-hdr { display:flex; align-items:center; gap:8px; padding:12px 16px 10px; border-bottom:1px solid rgba(255,255,255,.07); }
   .tips-hdr-ic { font-size:16px; }
-  .tips-hdr-tt { font-size:10px; letter-spacing:.18em; text-transform:uppercase; color:rgba(255,255,255,.5); }
+  .tips-hdr-tt { font-size:13px; letter-spacing:.12em; text-transform:uppercase; color:rgba(255,255,255,.6); font-weight:600; }
   .tips-badge { margin-left:auto; background:var(--gold); color:var(--ink); font-size:8px; font-weight:700; padding:2px 7px; border-radius:3px; }
   .tip-item { display:flex; align-items:flex-start; gap:10px; padding:9px 16px; border-bottom:1px solid rgba(255,255,255,.04); }
   .tip-item:last-child { border-bottom:none; }
-  .tip-cat { flex-shrink:0; background:rgba(192,21,42,.25); border-radius:6px; padding:3px 8px; font-size:8px; color:rgba(255,255,255,.7); margin-top:1px; white-space:nowrap; }
-  .tip-text { font-size:13.5px; color:rgba(255,255,255,.75); line-height:1.7; text-align:left; }
+  .tip-cat { flex-shrink:0; background:rgba(192,21,42,.25); border-radius:6px; padding:4px 10px; font-size:11px; color:rgba(255,255,255,.8); margin-top:1px; white-space:nowrap; }
+  .tip-text { font-size:15px; color:rgba(255,255,255,.85); line-height:1.75; text-align:left; }
   .tip-text strong { color:var(--gold-lt); font-weight:600; }
   .tip-url { display:flex; align-items:center; gap:6px; margin-top:6px; }
   .tip-url-text { font-size:10px; color:rgba(100,160,255,.7); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; }
@@ -485,7 +485,9 @@ const CSS = `
   .frow { display:flex; gap:10px; }
   .fgrp { flex:1; }
   .fdivider { margin:4px 20px 14px; font-size:10px; letter-spacing:.2em; color:rgba(192,21,42,.5); text-transform:uppercase; padding-top:14px; border-top:1px solid rgba(192,21,42,.1); }
-  .save-btn { width:calc(100% - 40px); margin:10px 20px 0; background:linear-gradient(135deg,var(--red),var(--red-deep)); color:#fff; border:none; border-radius:12px; padding:16px; font-family:"Noto Serif JP",serif; font-size:15px; letter-spacing:.1em; cursor:pointer; }
+  .save-btn { width:calc(100% - 40px); margin:10px 20px 0; background:linear-gradient(135deg,var(--red),var(--red-deep)); color:#fff; border:none; border-radius:12px; padding:16px; font-family:"Noto Serif JP",serif; font-size:15px; letter-spacing:.1em; cursor:pointer; transition:transform .1s, box-shadow .1s, background .2s; }
+  .save-btn:active { transform:scale(.97); }
+  .save-btn.saving { background:linear-gradient(135deg,#2a8a3e,#1a6b2e); box-shadow:0 0 0 3px rgba(42,138,62,.3); pointer-events:none; }
   .outline-btn { width:calc(100% - 40px); margin:10px 20px 0; background:transparent; border:1.5px solid var(--red); color:var(--red); border-radius:12px; padding:14px; font-family:"Noto Serif JP",serif; font-size:14px; letter-spacing:.1em; cursor:pointer; }
 `;
 
@@ -878,6 +880,35 @@ function LiveModal({ live:liveProp, tour, onClose, onUpdate }) {
 }
 
 // ── 編集フォーム ──
+// 保存してホームに戻るボタン（押下フィードバック付き）
+function SaveHomeButton({ doSave, onGoHome }) {
+  const [state, setState] = useState("idle"); // idle | saving | done
+
+  const handleClick = () => {
+    if (state !== "idle") return;
+    setState("saving");
+    doSave();
+    setTimeout(() => {
+      setState("done");
+      setTimeout(() => onGoHome(), 600);
+    }, 400);
+  };
+
+  const label = state === "saving" ? "保存中…"
+              : state === "done"   ? "✓ 保存しました！"
+              : "🏠 保存してホームに戻る";
+
+  return (
+    <button
+      className={"save-btn" + (state !== "idle" ? " saving" : "")}
+      style={{marginBottom:24, ...(state === "done" ? {background:"linear-gradient(135deg,#2a8a3e,#1a6b2e)"} : {})}}
+      onClick={handleClick}
+    >
+      {label}
+    </button>
+  );
+}
+
 function EditForm({ live, onClose, onGoHome, onUpdate }) {
   const [seat, setSeat]         = useState(live.seat||"");
   const [setlist, setSetlist]   = useState((live.songs||[]).map((s,i) => `${i+1}. ${s.t}${s.e?" [アンコール]":""}`).join("\n"));
@@ -926,8 +957,7 @@ function EditForm({ live, onClose, onGoHome, onUpdate }) {
         {/* ⑤Tips */}
         <div className="fdivider">Live を楽しむための Tips</div>
         <TipsInput value={tipsText} onChange={e=>setTipsText(e.target.value)}/>
-        <button className="save-btn"    onClick={() => { doSave(); onClose();   }}>✓ 保存して詳細に戻る</button>
-        <button className="outline-btn" onClick={() => { doSave(); onGoHome(); }}>🏠 保存してホームに戻る</button>
+        <SaveHomeButton doSave={doSave} onGoHome={onGoHome}/>
       </div>
     </div>
   );
