@@ -403,7 +403,9 @@ const CSS = `
   /* Modal */
   .overlay { position:fixed; inset:0; background:rgba(28,10,12,.78); z-index:100; display:flex; align-items:flex-end; backdrop-filter:blur(5px); }
   .modal { background:var(--paper); border-radius:24px 24px 0 0; width:100%; max-height:92vh; overflow-y:auto; padding:0 0 44px; }
-  .modal-nav { display:flex; align-items:center; justify-content:space-between; padding:16px 18px 0; }
+  .modal-handle { width:36px; height:4px; background:rgba(192,21,42,.18); border-radius:2px; margin:0 auto 12px; display:block; }
+  .modal-nav { position:sticky; top:0; z-index:10; display:flex; flex-direction:column; background:var(--paper); border-bottom:1px solid rgba(192,21,42,.08); box-shadow:0 2px 8px rgba(28,10,12,.06); padding:12px 18px 14px; }
+  .modal-nav-btns { display:flex; align-items:center; justify-content:space-between; }
   .nav-back { display:flex; align-items:center; gap:4px; background:rgba(192,21,42,.08); border:1.5px solid rgba(192,21,42,.2); color:var(--red); font-size:15px; font-family:"Noto Sans JP",sans-serif; cursor:pointer; padding:11px 18px; border-radius:10px; font-weight:500; }
   .nav-back::before { content:"‹"; font-size:22px; line-height:1; margin-right:2px; }
   .nav-right { display:flex; gap:8px; align-items:center; }
@@ -808,14 +810,16 @@ function LiveModal({ live:liveProp, tour, onClose, onUpdate }) {
   return (
     <div className="overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()}>
-        <div className="modal-handle"/>
         <div className="modal-nav">
-          <button className="nav-back" onClick={onClose}>ホームに戻る</button>
-          <div className="nav-right">
-            <button className="edit-btn" onClick={() => setEditing(true)}>✏️ 編集</button>
+          <div className="modal-handle"/>
+          <div className="modal-nav-btns">
+            <button className="nav-back" onClick={onClose}>ホームに戻る</button>
+            <div className="nav-right">
+              <button className="edit-btn" onClick={() => setEditing(true)}>✏️ 編集</button>
+            </div>
           </div>
         </div>
-        <div className={"mhero "+(isFeatured?"red":"dark")} style={{marginTop:10}}>
+        <div className={"mhero "+(isFeatured?"red":"dark")}>
           <div>
             <div className="mdate">{live.dateLabel||live.date}</div>
             <div className="mtitle">{tour.name}</div>
@@ -912,11 +916,13 @@ function EditForm({ live, onClose, onGoHome, onUpdate }) {
   return (
     <div className="overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()}>
-        <div className="modal-handle"/>
         <div className="modal-nav">
-          <button className="nav-back" onClick={onClose}>詳細に戻る</button>
+          <div className="modal-handle"/>
+          <div className="modal-nav-btns">
+            <button className="nav-back" onClick={onClose}>詳細に戻る</button>
+          </div>
         </div>
-        <div className="mhero dark" style={{marginTop:10}}>
+        <div className="mhero dark">
           <div className="mdate">EDIT</div>
           <div className="mtitle">{live.dateLabel||live.date}</div>
           <div className="mvenue">📍 {live.venue}</div>
@@ -990,11 +996,13 @@ function AddForm({ onClose, onSave, onSaveAndClose }) {
   return (
     <div className="overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()}>
-        <div className="modal-handle"/>
         <div className="modal-nav">
-          <button className="nav-back" onClick={onClose}>ホームに戻る</button>
+          <div className="modal-handle"/>
+          <div className="modal-nav-btns">
+            <button className="nav-back" onClick={onClose}>ホームに戻る</button>
+          </div>
         </div>
-        <div className="mhero red" style={{marginTop:10}}><div className="mdate">NEW ENTRY</div><div className="mtitle">ライブを記録する</div></div>
+        <div className="mhero red"><div className="mdate">NEW ENTRY</div><div className="mtitle">ライブを記録する</div></div>
         {/* 基本情報 */}
         <div className="fsec">
           <label className="flbl">ツアー・公演名</label>
