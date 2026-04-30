@@ -1,6 +1,7 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
 // ─────────────────────────────────────────────
 //  Firebase 初期化
@@ -17,6 +18,7 @@ const firebaseConfig = {
 
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getFirestore(firebaseApp);
+const storage = getStorage(firebaseApp);
 const DOC_REF = doc(db, "archive", "allLives");
 
 const loadFromFirestore = async () => {
@@ -447,6 +449,7 @@ const CSS = `
   .photo-thumb { position:relative; width:80px; height:80px; flex-shrink:0; }
   .photo-thumb img { width:80px; height:80px; border-radius:8px; object-fit:cover; }
   .photo-del { position:absolute; top:-6px; right:-6px; background:var(--red); color:#fff; border:none; border-radius:50%; width:20px; height:20px; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
   /* Memory */
   .mem-list { display:flex; flex-direction:column; gap:10px; }
@@ -490,18 +493,33 @@ const CSS = `
 //  ユーティリティ
 // ─────────────────────────────────────────────
 
-function usePhotoUpload(initial = []) {
-  const [photos, setPhotos] = useState(initial);
-  const handleAdd = (e) => {
-    Array.from(e.target.files).forEach(file => {
-      const reader = new FileReader();
-      reader.onload = ev => setPhotos(prev => [...prev, ev.target.result]);
-      reader.readAsDataURL(file);
-    });
+function usePhotoUpload(initial = [], liveId = "unknown") {
+  const [photos,    setPhotos]    = useState(initial);
+  const [uploading, setUploading] = useState(false);
+
+  const handleAdd = async (e) => {
+    const files = Array.from(e.target.files);
     e.target.value = "";
+    if (!files.length) return;
+    setUploading(true);
+    try {
+      const urls = await Promise.all(files.map(async (file) => {
+        const path = `photos/${liveId}/${Date.now()}_${file.name}`;
+        const ref = storageRef(storage, path);
+        await uploadBytes(ref, file);
+        return await getDownloadURL(ref);
+      }));
+      setPhotos(prev => [...prev, ...urls].slice(0, 6));
+    } catch (err) {
+      alert("写真のアップロードに失敗しました。もう一度お試しください。");
+    } finally {
+      setUploading(false);
+    }
   };
+
   const handleRemove = (i) => setPhotos(prev => prev.filter((_,idx) => idx !== i));
-  return { photos, handleAdd, handleRemove };
+
+  return { photos, handleAdd, handleRemove, uploading };
 }
 
 const parseTips = (text) =>
@@ -514,7 +532,7 @@ const tipsToText = (tips) =>
 //  共通サブコンポーネント
 // ─────────────────────────────────────────────
 
-function PhotoEditor({ photos, onAdd, onRemove }) {
+function PhotoEditor({ photos, onAdd, onRemove, uploading }) {
   return (
     <div className="fsec">
       <div style={{ display:"flex", gap:10, flexWrap:"wrap", marginBottom:8 }}>
@@ -527,8 +545,14 @@ function PhotoEditor({ photos, onAdd, onRemove }) {
             <button className="photo-del" onClick={() => onRemove(i)}>×</button>
           </div>
         ))}
+        {uploading && (
+          <div style={{width:80,height:80,borderRadius:8,background:"var(--mist)",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:6}}>
+            <div style={{width:24,height:24,border:"3px solid var(--red)",borderTopColor:"transparent",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
+            <div style={{fontSize:9,color:"var(--red)"}}>送信中</div>
+          </div>
+        )}
       </div>
-      {photos.length < 6 && (
+      {!uploading && photos.length < 6 && (
         <input type="file" accept="image/*" multiple style={{fontSize:13,color:"var(--ink)"}} onChange={onAdd}/>
       )}
       <div style={{fontSize:10,color:"rgba(28,10,12,.3)",marginTop:6}}>最大6枚まで追加できます</div>
@@ -859,7 +883,7 @@ function EditForm({ live, onClose, onGoHome, onUpdate }) {
   const [setlist, setSetlist]   = useState((live.songs||[]).map((s,i) => `${i+1}. ${s.t}${s.e?" [アンコール]":""}`).join("\n"));
   const [mem, setMem]           = useState(live.memory||{before:"",after:"",highlight:"",other:""});
   const [tipsText, setTipsText] = useState(tipsToText(live.tips));
-  const { photos, handleAdd, handleRemove } = usePhotoUpload(live.photos||[]);
+  const { photos, handleAdd, handleRemove, uploading } = usePhotoUpload(live.photos||[], live.id);
 
   const doSave = () => {
     const songs = setlist.split("\n").map(l=>l.trim()).filter(Boolean).map((line,i) => {
@@ -895,7 +919,7 @@ function EditForm({ live, onClose, onGoHome, onUpdate }) {
         </div>
         {/* ③写真 */}
         <div className="fdivider">写真</div>
-        <PhotoEditor photos={photos} onAdd={handleAdd} onRemove={handleRemove}/>
+        <PhotoEditor photos={photos} onAdd={handleAdd} onRemove={handleRemove} uploading={uploading}/>
         {/* ④思い出メモ */}
         <div className="fdivider">思い出メモ</div>
         <MemInputs mem={mem} setMem={setMem}/>
@@ -920,7 +944,7 @@ function AddForm({ onClose, onSave, onSaveAndClose }) {
   const [seatNo,    setSeatNo]    = useState("");
   const [mem,       setMem]       = useState({before:"",after:"",highlight:"",other:""});
   const [tipsText,  setTipsText]  = useState("");
-  const { photos, handleAdd, handleRemove } = usePhotoUpload([]);
+  const { photos, handleAdd, handleRemove, uploading } = usePhotoUpload([], `new-${Date.now()}`);
 
   const buildLive = () => {
     const songs = setlist.split("\n").map(l=>l.trim()).filter(Boolean).map((line,i) => {
@@ -987,7 +1011,7 @@ function AddForm({ onClose, onSave, onSaveAndClose }) {
         </div>
         {/* ③写真 */}
         <div className="fdivider">写真</div>
-        <PhotoEditor photos={photos} onAdd={handleAdd} onRemove={handleRemove}/>
+        <PhotoEditor photos={photos} onAdd={handleAdd} onRemove={handleRemove} uploading={uploading}/>
         {/* ④思い出メモ */}
         <div className="fdivider">思い出メモ</div>
         <MemInputs mem={mem} setMem={setMem}/>
