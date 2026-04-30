@@ -20,7 +20,7 @@ const T_DOTS = (() => {
   const d = [];
   for (let r = 0; r < 7; r++)
     for (let c = 0; c < 7; c++)
-      d.push({ key: r*7+c, lit: r<=1||(c>=2&&c<=4), color: C[(r*7+c)%4] });
+      d.push({ key:r*7+c, lit:r<=1||(c>=2&&c<=4), color:C[(r*7+c)%4] });
   return d;
 })();
 
@@ -29,8 +29,8 @@ const ZONE_DOTS = (() => {
   const dots = [];
   const cx = 50, cy = 50;
   for (let i = 0; i < 40; i++) {
-    const angle = (i / 40) * Math.PI * 2;
-    const dist  = 25 + (i % 4) * 10;
+    const angle = (i/40)*Math.PI*2;
+    const dist  = 25 + (i%4)*10;
     dots.push({ key:i, x:cx+Math.cos(angle)*dist, y:cy+Math.sin(angle)*dist,
       opacity:0.15+(1-dist/65)*0.7, size:2+(1-dist/65)*4 });
   }
@@ -56,7 +56,7 @@ const TOURS = [
         seat: "未設定",
         highlight: null,
         tag: "横浜",
-        emoji: "🔴",
+        emoji: "🎡",
         songs: [
           { n:1,  t:"small talk"                         },
           { n:2,  t:"Reboot"                             },
@@ -90,6 +90,13 @@ const TOURS = [
           { n:30, t:"Weep",             e: true          },
           { n:31, t:"時ヲ止メテ",          e: true          },
         ],
+        memory: {
+          before:    "",
+          after:     "",
+          highlight: "",
+          other:     "",
+        },
+        tips:   [],
         photos: [],
       },
       {
@@ -102,7 +109,7 @@ const TOURS = [
         seat: "W1F / 入口W13 / 列8 / 座席245",
         highlight: "W1F",
         tag: "横浜",
-        emoji: "🌊",
+        emoji: "🎡",
         songs: [
           { n:1,  t:"small talk"                         },
           { n:2,  t:"Reboot"                             },
@@ -167,7 +174,7 @@ const TOURS = [
         open: "17:00", start: "18:00",
         venue: "さいたまスーパーアリーナ",
         seat: "未設定", highlight: null,
-        tag: "埼玉", emoji: "🏟️",
+        tag: "埼玉", emoji: "🍡",
         songs: [
           { n:1,  t:"TRHM"                },
           { n:2,  t:"Android"             },
@@ -191,6 +198,8 @@ const TOURS = [
           { n:20, t:"Love in the Ice"     },
           { n:21, t:"Catch Me", e: true   },
         ],
+        memory: { before:"", after:"", highlight:"", other:"" },
+        tips:   [],
         photos: [],
       },
       {
@@ -200,7 +209,7 @@ const TOURS = [
         open: "16:00", start: "17:00",
         venue: "大阪城ホール",
         seat: "未設定", highlight: null,
-        tag: "大阪", emoji: "🏯",
+        tag: "大阪", emoji: "🐙",
         songs: [
           { n:1,  t:"TRHM"                },
           { n:2,  t:"Android"             },
@@ -224,6 +233,8 @@ const TOURS = [
           { n:20, t:"Love in the Ice"     },
           { n:21, t:"Catch Me", e: true   },
         ],
+        memory: { before:"", after:"", highlight:"", other:"" },
+        tips:   [],
         photos: [],
       },
       {
@@ -233,7 +244,7 @@ const TOURS = [
         open: "16:00", start: "17:00",
         venue: "東京ドーム",
         seat: "未設定", highlight: null,
-        tag: "東京", emoji: "🌸",
+        tag: "東京", emoji: "🗼",
         songs: [
           { n:1,  t:"TRHM"                },
           { n:2,  t:"Android"             },
@@ -257,11 +268,21 @@ const TOURS = [
           { n:20, t:"Love in the Ice"     },
           { n:21, t:"Catch Me", e: true   },
         ],
+        memory: { before:"", after:"", highlight:"", other:"" },
+        tips:   [],
         photos: [],
       },
     ],
   },
 ];
+
+// ─────────────────────────────────────────────
+//  ローカルストレージ
+// ─────────────────────────────────────────────
+
+const LS_KEY = "tvxq_user_lives";
+const loadUserLives = () => { try { return JSON.parse(localStorage.getItem(LS_KEY)||"[]"); } catch { return []; } };
+const saveUserLives = (d) => { try { localStorage.setItem(LS_KEY,JSON.stringify(d)); } catch {} };
 
 // ─────────────────────────────────────────────
 //  スタイル
@@ -431,11 +452,7 @@ const CSS = `
 //  ユーティリティ
 // ─────────────────────────────────────────────
 
-const LS_KEY = "tvxq_user_lives";
-const loadUserLives = () => { try { return JSON.parse(localStorage.getItem(LS_KEY)||"[]"); } catch { return []; } };
-const saveUserLives = (d) => { try { localStorage.setItem(LS_KEY,JSON.stringify(d)); } catch {} };
-
-function usePhotoUpload(initial=[]) {
+function usePhotoUpload(initial = []) {
   const [photos, setPhotos] = useState(initial);
   const handleAdd = (e) => {
     Array.from(e.target.files).forEach(file => {
@@ -445,21 +462,31 @@ function usePhotoUpload(initial=[]) {
     });
     e.target.value = "";
   };
-  const handleRemove = (i) => setPhotos(prev => prev.filter((_,idx)=>idx!==i));
+  const handleRemove = (i) => setPhotos(prev => prev.filter((_,idx) => idx !== i));
   return { photos, handleAdd, handleRemove };
 }
+
+const parseTips = (text) =>
+  text.split("\n").map(l => l.trim()).filter(Boolean).map(t => ({ cat:"📌 Tips", text:t }));
+
+const tipsToText = (tips) =>
+  (tips || []).map(t => t.text.replace(/<[^>]+>/g, "")).join("\n");
+
+// ─────────────────────────────────────────────
+//  共通サブコンポーネント
+// ─────────────────────────────────────────────
 
 function PhotoEditor({ photos, onAdd, onRemove }) {
   return (
     <div className="fsec">
       <div style={{ display:"flex", gap:10, flexWrap:"wrap", marginBottom:8 }}>
-        {photos.map((p,i) => (
+        {photos.map((p, i) => (
           <div key={i} className="photo-thumb">
-            {(p.startsWith("data:")||p.startsWith("http"))
+            {(p.startsWith("data:") || p.startsWith("http"))
               ? <img src={p} alt=""/>
               : <div style={{width:80,height:80,borderRadius:8,background:"var(--mist)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:24}}>{p}</div>
             }
-            <button className="photo-del" onClick={()=>onRemove(i)}>×</button>
+            <button className="photo-del" onClick={() => onRemove(i)}>×</button>
           </div>
         ))}
       </div>
@@ -467,6 +494,109 @@ function PhotoEditor({ photos, onAdd, onRemove }) {
         <input type="file" accept="image/*" multiple style={{fontSize:13,color:"var(--ink)"}} onChange={onAdd}/>
       )}
       <div style={{fontSize:10,color:"rgba(28,10,12,.3)",marginTop:6}}>最大6枚まで追加できます</div>
+    </div>
+  );
+}
+
+// セクション順統一コンポーネント群
+// 順番：①セットリスト ②座席 ③写真 ④思い出メモ ⑤Tips
+
+function MemorySection({ memory, comment }) {
+  if (memory) {
+    return (
+      <div className="mem-list">
+        {MEM_FIELDS.map(({ key, icon, label }) => (
+          <div key={key} className="mem-card">
+            <div className="mem-hdr"><span className="mem-icon">{icon}</span><span className="mem-lbl">{label}</span></div>
+            <div className="mem-text">
+              {memory[key]
+                ? memory[key]
+                : <span className="empty">まだ記録されていません…</span>
+              }
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  if (comment) return <div className="comment">{comment}</div>;
+  return (
+    <div className="mem-list">
+      {MEM_FIELDS.map(({ key, icon, label }) => (
+        <div key={key} className="mem-card">
+          <div className="mem-hdr"><span className="mem-icon">{icon}</span><span className="mem-lbl">{label}</span></div>
+          <div className="mem-text"><span className="empty">まだ記録されていません…</span></div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TipItem({ tip }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="tip-item">
+      <span className="tip-cat">{tip.cat}</span>
+      <div style={{flex:1}}>
+        <span className="tip-text" dangerouslySetInnerHTML={{__html:tip.text}}/>
+        {tip.url && (
+          <div className="tip-url">
+            <span className="tip-url-text">{tip.url}</span>
+            <button className={"tip-copy"+(copied?" copied":"")}
+              onClick={() => navigator.clipboard.writeText(tip.url).then(() => { setCopied(true); setTimeout(()=>setCopied(false),2000); })}>
+              {copied ? "✓ コピー済" : "📋 コピー"}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TipsSection({ tips }) {
+  return (
+    <div className="tips-box">
+      <div className="tips-hdr"><span className="tips-hdr-ic">📌</span><span className="tips-hdr-tt">Live を楽しむための Tips</span><span className="tips-badge">TIPS</span></div>
+      {(!tips || tips.length === 0)
+        ? <div className="tip-item"><span className="tip-text" style={{color:"rgba(255,255,255,.28)",fontStyle:"italic"}}>まだ Tips が記録されていません…</span></div>
+        : tips.map((tip, i) => <TipItem key={i} tip={tip}/>)
+      }
+    </div>
+  );
+}
+
+// 思い出メモ入力フィールド群
+function MemInputs({ mem, setMem }) {
+  return (
+    <>
+      {MEM_FIELDS.map(({ key, icon, label }) => (
+        <div key={key} className="fsec">
+          <label className="flbl"><span>{icon}</span>{label}</label>
+          <textarea className="finp" rows={3} style={{resize:"none",lineHeight:1.8}}
+            value={mem[key]||""}
+            onChange={e => setMem(prev => ({...prev, [key]: e.target.value}))}
+            placeholder={
+              key==="before" ? "ライブ前の気持ち、期待していたこと…" :
+              key==="after"  ? "終わった後の感情、余韻…" :
+              key==="highlight" ? "特に印象に残った曲・瞬間・演出…" :
+              "その他なんでも…"
+            }
+          />
+        </div>
+      ))}
+    </>
+  );
+}
+
+// Tips入力フィールド
+function TipsInput({ value, onChange }) {
+  return (
+    <div className="fsec">
+      <label className="flbl">Tips（1行1項目）</label>
+      <textarea className="finp" rows={4} style={{resize:"none",lineHeight:1.8}}
+        placeholder={"コクーンのフードコートが穴場\n開演1時間前に並ぶとトイレも余裕\n2階スタンドは段差があって見やすい"}
+        value={value} onChange={onChange}
+      />
     </div>
   );
 }
@@ -481,16 +611,16 @@ function Silhouette() {
 
 function TourCard({ tour, onLiveSelect }) {
   const [open, setOpen] = useState(false);
-  const totalSongs = tour.lives.reduce((s,l)=>s+l.songs.length,0);
-  const ROD_COLORS = ["#e8112d","#c0152a","#ff3355","#d42035","#ff1a40","#b00d22"];
+  const totalSongs = tour.lives.reduce((s,l) => s+l.songs.length, 0);
+  const ROD = ["#e8112d","#c0152a","#ff3355","#d42035","#ff1a40","#b00d22"];
   return (
     <div className="tour-card">
-      {tour.id==="tour-20th" && (
-        <div className="red-vis" onClick={()=>setOpen(o=>!o)}>
+      {tour.id === "tour-20th" && (
+        <div className="red-vis" onClick={() => setOpen(o=>!o)}>
           <div className="red-wm"><span>RED OCEAN</span></div>
           <div className="red-ocean-dots">
-            {Array.from({length:60}).map((_,i)=>(
-              <div key={i} className="rod" style={{background:ROD_COLORS[i%ROD_COLORS.length],height:6+(i%5)*3,opacity:0.4+(i%4)*0.15,boxShadow:`0 0 3px ${ROD_COLORS[i%ROD_COLORS.length]}`}}/>
+            {Array.from({length:60}).map((_,i) => (
+              <div key={i} className="rod" style={{background:ROD[i%ROD.length],height:6+(i%5)*3,opacity:0.4+(i%4)*0.15,boxShadow:`0 0 3px ${ROD[i%ROD.length]}`}}/>
             ))}
           </div>
           <div className="red-waves"><div className="red-wave"/><div className="red-wave"/><div className="red-wave"/></div>
@@ -499,14 +629,14 @@ function TourCard({ tour, onLiveSelect }) {
           <div className="red-arrow">›</div>
         </div>
       )}
-      {tour.id==="tour-zone" && (
-        <div className="zone-vis" onClick={()=>setOpen(o=>!o)}>
+      {tour.id === "tour-zone" && (
+        <div className="zone-vis" onClick={() => setOpen(o=>!o)}>
           <div className="zone-wm"><span>ZONE</span></div>
           <svg className="zone-dots-svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
             <circle cx="50" cy="50" r="4" fill="rgba(180,220,255,0.9)"/>
             <circle cx="50" cy="50" r="8" fill="rgba(120,180,255,0.2)"/>
             <circle cx="50" cy="50" r="14" fill="rgba(80,140,255,0.08)"/>
-            {ZONE_DOTS.map(({key,x,y,opacity,size})=>(
+            {ZONE_DOTS.map(({key,x,y,opacity,size}) => (
               <circle key={key} cx={x} cy={y} r={size/2} fill={`rgba(140,200,255,${opacity})`}/>
             ))}
           </svg>
@@ -515,7 +645,7 @@ function TourCard({ tour, onLiveSelect }) {
           <div className="zone-arrow">›</div>
         </div>
       )}
-      <div className="tour-card-hdr" onClick={()=>setOpen(o=>!o)}>
+      <div className="tour-card-hdr" onClick={() => setOpen(o=>!o)}>
         <div className="tour-card-bar" style={{background:tour.color}}/>
         <div className="tour-card-info">
           <div className="tour-card-name">{tour.name}</div>
@@ -525,8 +655,8 @@ function TourCard({ tour, onLiveSelect }) {
       </div>
       {open && (
         <div className="lives-list">
-          {tour.lives.map(live=>(
-            <div key={live.id} className="live-item" onClick={()=>onLiveSelect(live,tour)}>
+          {tour.lives.map(live => (
+            <div key={live.id} className="live-item" onClick={() => onLiveSelect(live, tour)}>
               <div className="live-item-emoji">{live.emoji}</div>
               <div className="live-item-info">
                 <div className="live-item-date">{live.date}</div>
@@ -543,28 +673,33 @@ function TourCard({ tour, onLiveSelect }) {
 }
 
 function Setlist({ songs }) {
-  let encoreShown = false;
+  let shown = false;
   return (
     <ul className="setlist">
       {songs.map(s => {
-        const isEncore = !!s.e;
-        let divider = null;
-        if (isEncore && !encoreShown) {
-          encoreShown = true;
-          divider = <li key="enc"><div className="enc-div"><div className="enc-line"/><span className="enc-lbl">― アンコール ―</span><div className="enc-line"/></div></li>;
+        const enc = !!s.e;
+        let div = null;
+        if (enc && !shown) {
+          shown = true;
+          div = <li key="enc"><div className="enc-div"><div className="enc-line"/><span className="enc-lbl">― アンコール ―</span><div className="enc-line"/></div></li>;
         }
-        return [divider, <li key={s.n} className="sl-item"><span className="sl-num">{s.n}</span><div className="sl-name">{s.t}</div>{isEncore&&<span className="sl-enc">ENCORE</span>}</li>];
+        return [div, <li key={s.n} className="sl-item"><span className="sl-num">{s.n}</span><div className="sl-name">{s.t}</div>{enc&&<span className="sl-enc">ENCORE</span>}</li>];
       })}
     </ul>
   );
 }
 
 function StadiumMap({ highlight, seat }) {
-  const RED="#e8112d",S1="#2a1010",S2="#3a1515",AR="#1a2a1a",ST="#c9a84c";
-  const hl = id => highlight===id?RED:undefined;
-  const PX={W1F:65,W2F:39,E1F:255,E2F:281,N1F:160,N2F:160,S1F:160,S2F:160,arena:160};
-  const PY={W1F:148,W2F:148,E1F:148,E2F:148,N1F:56,N2F:31,S1F:240,S2F:265,arena:148};
-  const LB=[{x:160,y:14,lbl:"N 2F",id:"N2F"},{x:160,y:38,lbl:"N 1F",id:"N1F"},{x:160,y:284,lbl:"S 2F",id:"S2F"},{x:160,y:260,lbl:"S 1F",id:"S1F"},{x:19,y:150,lbl:"W",id:"W2F",rot:-90},{x:38,y:150,lbl:"W",id:"W1F",rot:-90},{x:301,y:150,lbl:"E",id:"E2F",rot:90},{x:282,y:150,lbl:"E",id:"E1F",rot:90}];
+  const RED="#e8112d", S1="#2a1010", S2="#3a1515", AR="#1a2a1a", ST="#c9a84c";
+  const hl = id => highlight===id ? RED : undefined;
+  const PX = {W1F:65,W2F:39,E1F:255,E2F:281,N1F:160,N2F:160,S1F:160,S2F:160,arena:160};
+  const PY = {W1F:148,W2F:148,E1F:148,E2F:148,N1F:56,N2F:31,S1F:240,S2F:265,arena:148};
+  const LB = [
+    {x:160,y:14,lbl:"N 2F",id:"N2F"},{x:160,y:38,lbl:"N 1F",id:"N1F"},
+    {x:160,y:284,lbl:"S 2F",id:"S2F"},{x:160,y:260,lbl:"S 1F",id:"S1F"},
+    {x:19,y:150,lbl:"W",id:"W2F",rot:-90},{x:38,y:150,lbl:"W",id:"W1F",rot:-90},
+    {x:301,y:150,lbl:"E",id:"E2F",rot:90},{x:282,y:150,lbl:"E",id:"E1F",rot:90},
+  ];
   return (
     <div className="seat-map">
       <svg viewBox="0 0 320 300" width="100%" style={{display:"block"}}>
@@ -580,171 +715,145 @@ function StadiumMap({ highlight, seat }) {
         <ellipse cx="160" cy="148" rx="80" ry="80" fill={hl("arena")||AR} stroke="#1a2a1a" strokeWidth="1"/>
         <rect x="118" y="208" width="84" height="22" rx="4" fill={ST} opacity=".9"/>
         <text x="160" y="223" textAnchor="middle" fontSize="9" fill="#1c0a0c" fontFamily="sans-serif" fontWeight="bold" letterSpacing="2">STAGE</text>
-        {LB.map(s=>(
+        {LB.map(s => (
           <text key={s.id} x={s.x} y={s.y} textAnchor="middle" dominantBaseline="middle" fontSize="7" fontFamily="sans-serif"
             fill={highlight===s.id?"#fff":"rgba(255,255,255,0.4)"} fontWeight={highlight===s.id?"bold":"normal"}
             transform={s.rot?`rotate(${s.rot},${s.x},${s.y})`:undefined}>{s.lbl}</text>
         ))}
         <text x="160" y="130" textAnchor="middle" fontSize="8" fill="rgba(255,255,255,0.25)" fontFamily="sans-serif">ARENA</text>
-        {highlight&&PX[highlight]&&<>
+        {highlight && PX[highlight] && <>
           <circle cx={PX[highlight]} cy={PY[highlight]} r="7" fill={RED} opacity=".9"/>
           <text x={PX[highlight]} y={PY[highlight]} textAnchor="middle" dominantBaseline="middle" fontSize="8" fill="#fff" fontWeight="bold" fontFamily="sans-serif">★</text>
         </>}
       </svg>
-      <div className="seat-info">{seat?<strong>{seat}</strong>:<span>座席情報は未設定です</span>}</div>
+      <div className="seat-info">{seat ? <strong>{seat}</strong> : <span>座席情報は未設定です</span>}</div>
     </div>
   );
 }
 
-function MemoryView({ memory, comment }) {
-  if (memory) {
-    const filled = MEM_FIELDS.filter(f=>memory[f.key]);
-    if (filled.length===0) return <div className="comment empty">まだ感想が記録されていません…</div>;
-    return (
-      <div className="mem-list">
-        {filled.map(({key,icon,label})=>(
-          <div key={key} className="mem-card">
-            <div className="mem-hdr"><span className="mem-icon">{icon}</span><span className="mem-lbl">{label}</span></div>
-            <div className="mem-text">{memory[key]}</div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-  if (comment) return <div className="comment">{comment}</div>;
-  return <div className="comment empty">まだ感想が記録されていません…</div>;
-}
-
-function TipItem({ tip }) {
-  const [copied,setCopied]=useState(false);
-  return (
-    <div className="tip-item">
-      <span className="tip-cat">{tip.cat}</span>
-      <div style={{flex:1}}>
-        <span className="tip-text" dangerouslySetInnerHTML={{__html:tip.text}}/>
-        {tip.url&&(
-          <div className="tip-url">
-            <span className="tip-url-text">{tip.url}</span>
-            <button className={"tip-copy"+(copied?" copied":"")} onClick={()=>{navigator.clipboard.writeText(tip.url).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);});}}>
-              {copied?"✓ コピー済":"📋 コピー"}
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function TipsView({ tips }) {
-  if (!tips||tips.length===0) return null;
-  return (
-    <div className="tips-box">
-      <div className="tips-hdr"><span className="tips-hdr-ic">📌</span><span className="tips-hdr-tt">現地お役立ち情報</span><span className="tips-badge">TIPS</span></div>
-      {tips.map((tip,i)=><TipItem key={i} tip={tip}/>)}
-    </div>
-  );
-}
-
-// ── 編集フォーム ──
-function EditForm({ live, onClose, onGoHome, onUpdate }) {
-  const [seat,setSeat]=useState(live.seat||"");
-  const [mem,setMem]=useState(live.memory||{before:"",after:"",highlight:"",other:""});
-  const {photos,handleAdd,handleRemove}=usePhotoUpload(live.photos||[]);
-
-  const doSave = () => { onUpdate(live.id,{seat,memory:mem,photos}); };
-
-  return (
-    <div className="overlay" onClick={onClose}>
-      <div className="modal" onClick={e=>e.stopPropagation()}>
-        <div className="modal-handle"/>
-        <div className="mhero dark">
-          <div className="mdate">EDIT</div>
-          <div className="mtitle">{live.dateLabel||live.date}</div>
-          <div className="mvenue">📍 {live.venue}</div>
-        </div>
-        <div className="fsec">
-          <label className="flbl">座席情報</label>
-          <input className="finp" placeholder="例: W1F / 入口W13 / 列8 / 座席245" value={seat} onChange={e=>setSeat(e.target.value)}/>
-        </div>
-        <div className="fdivider">思い出メモ</div>
-        {MEM_FIELDS.map(({key,icon,label})=>(
-          <div key={key} className="fsec">
-            <label className="flbl"><span>{icon}</span>{label}</label>
-            <textarea className="finp" rows={3} style={{resize:"none",lineHeight:1.8}}
-              value={mem[key]||""} onChange={e=>setMem(prev=>({...prev,[key]:e.target.value}))}
-              placeholder={key==="before"?"ライブ前の気持ち…":key==="after"?"終わった後の感情…":key==="highlight"?"特に印象に残った瞬間…":"その他なんでも…"}
-            />
-          </div>
-        ))}
-        <div className="fdivider">写真</div>
-        <PhotoEditor photos={photos} onAdd={handleAdd} onRemove={handleRemove}/>
-        <button className="save-btn" onClick={()=>{doSave();onClose();}}>変更を保存する</button>
-        <button className="outline-btn" onClick={()=>{doSave();onGoHome();}}>保存してホームに戻る</button>
-      </div>
-    </div>
-  );
-}
+// ─────────────────────────────────────────────
+//  モーダル群（全て同じセクション順で統一）
+//  順番：①セットリスト ②座席 ③写真 ④思い出メモ ⑤Tips
+// ─────────────────────────────────────────────
 
 // ── 公演詳細モーダル ──
 function LiveModal({ live:liveProp, tour, onClose, onUpdate }) {
-  const isFeatured=!!tour.featured;
-  const [editing,setEditing]=useState(false);
-  const [live,setLive]=useState(liveProp);
+  const isFeatured = !!tour.featured;
+  const [editing, setEditing] = useState(false);
+  const [live, setLive] = useState(liveProp);
 
-  const handleUpdate=(id,changes)=>{
-    const updated={...live,...changes};
-    setLive(updated);
-    onUpdate(id,changes);
+  const handleUpdate = (id, changes) => {
+    setLive(prev => ({...prev, ...changes}));
+    onUpdate(id, changes);
   };
 
   if (editing) return (
-    <EditForm live={live} onClose={()=>setEditing(false)} onGoHome={onClose} onUpdate={handleUpdate}/>
+    <EditForm live={live} onClose={() => setEditing(false)} onGoHome={onClose} onUpdate={handleUpdate}/>
   );
 
   return (
     <div className="overlay" onClick={onClose}>
-      <div className="modal" onClick={e=>e.stopPropagation()}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
         <div className="modal-handle"/>
         <div className={"mhero "+(isFeatured?"red":"dark")}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
             <div>
               <div className="mdate">{live.dateLabel||live.date}</div>
               <div className="mtitle">{tour.name}</div>
-              {tour.sub&&<div className="msub">{tour.sub}</div>}
+              {tour.sub && <div className="msub">{tour.sub}</div>}
               <div className="mvenue">📍 {live.venue}</div>
-              {live.open&&<div className="mtime-row"><div className="mtime">開場 <b>{live.open}</b></div><div className="mtime">開演 <b>{live.start}</b></div></div>}
+              {live.open && <div className="mtime-row"><div className="mtime">開場 <b>{live.open}</b></div><div className="mtime">開演 <b>{live.start}</b></div></div>}
             </div>
-            <button className="edit-btn" onClick={()=>setEditing(true)}>✏️ 編集</button>
+            <button className="edit-btn" onClick={() => setEditing(true)}>✏️ 編集</button>
           </div>
         </div>
+        {/* ①セットリスト */}
         <div className="msec">
           <div className="msec-ttl">セットリスト<span style={{fontSize:10,color:"rgba(28,10,12,0.3)",fontWeight:"normal",marginLeft:"auto",paddingLeft:8}}>全{live.songs.length}曲</span></div>
           <Setlist songs={live.songs}/>
         </div>
+        {/* ②座席 */}
         <div className="msec">
           <div className="msec-ttl">座席位置</div>
           {isFeatured
-            ?<StadiumMap highlight={live.highlight} seat={live.seat}/>
-            :<div style={{background:"#1c0a0c",borderRadius:12,padding:14,textAlign:"center",color:"rgba(255,255,255,.28)",fontSize:12}}>{live.seat||"座席情報は未設定です"}</div>
+            ? <StadiumMap highlight={live.highlight} seat={live.seat}/>
+            : <div style={{background:"#1c0a0c",borderRadius:12,padding:14,textAlign:"center",color:"rgba(255,255,255,.28)",fontSize:12}}>{live.seat||"座席情報は未設定です"}</div>
           }
         </div>
+        {/* ③写真 */}
         <div className="msec">
           <div className="msec-ttl">フォト</div>
           <div className="photos">
-            {(live.photos||[]).map((p,i)=>(
+            {(live.photos||[]).map((p,i) => (
               <div key={i} className="photo">
-                {(p.startsWith("data:")||p.startsWith("http"))?<img src={p} alt=""/>:p}
+                {(p.startsWith("data:")||p.startsWith("http")) ? <img src={p} alt=""/> : p}
               </div>
             ))}
           </div>
         </div>
+        {/* ④思い出メモ */}
         <div className="msec">
           <div className="msec-ttl">思い出メモ</div>
-          <MemoryView memory={live.memory} comment={live.comment}/>
+          <MemorySection memory={live.memory} comment={live.comment}/>
         </div>
-        {live.tips&&live.tips.length>0&&(
-          <div className="msec"><div className="msec-ttl">Live を楽しむための Tips</div><TipsView tips={live.tips}/></div>
-        )}
+        {/* ⑤Tips */}
+        <div className="msec">
+          <div className="msec-ttl">Live を楽しむための Tips</div>
+          <TipsSection tips={live.tips}/>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── 編集フォーム ──
+function EditForm({ live, onClose, onGoHome, onUpdate }) {
+  const [seat, setSeat]         = useState(live.seat||"");
+  const [setlist, setSetlist]   = useState((live.songs||[]).map((s,i) => `${i+1}. ${s.t}${s.e?" [アンコール]":""}`).join("\n"));
+  const [mem, setMem]           = useState(live.memory||{before:"",after:"",highlight:"",other:""});
+  const [tipsText, setTipsText] = useState(tipsToText(live.tips));
+  const { photos, handleAdd, handleRemove } = usePhotoUpload(live.photos||[]);
+
+  const doSave = () => {
+    const songs = setlist.split("\n").map(l=>l.trim()).filter(Boolean).map((line,i) => {
+      const e = /アンコール/i.test(line);
+      const t = line.replace(/^\d+\.\s*/,"").replace(/\s*[\[［]アンコール[\]］]/i,"");
+      return { n:i+1, t, ...(e?{e:true}:{}) };
+    });
+    onUpdate(live.id, { seat, songs, photos, memory:mem, tips:parseTips(tipsText) });
+  };
+
+  return (
+    <div className="overlay" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-handle"/>
+        <div className="mhero dark">
+          <div className="mdate">EDIT</div>
+          <div className="mtitle">{live.dateLabel||live.date}</div>
+          <div className="mvenue">📍 {live.venue}</div>
+        </div>
+        {/* ①セットリスト */}
+        <div className="fdivider">セットリスト</div>
+        <div className="fsec">
+          <textarea className="finp" rows={5} placeholder={"1. Mirotic\n2. Rising Sun\n3. Before U Go  [アンコール]"} style={{resize:"none",lineHeight:1.8}} value={setlist} onChange={e=>setSetlist(e.target.value)}/>
+        </div>
+        {/* ②座席 */}
+        <div className="fdivider">座席</div>
+        <div className="fsec">
+          <label className="flbl">座席情報</label>
+          <input className="finp" placeholder="例: W1F / 入口W13 / 列8 / 座席245" value={seat} onChange={e=>setSeat(e.target.value)}/>
+        </div>
+        {/* ③写真 */}
+        <div className="fdivider">写真</div>
+        <PhotoEditor photos={photos} onAdd={handleAdd} onRemove={handleRemove}/>
+        {/* ④思い出メモ */}
+        <div className="fdivider">思い出メモ</div>
+        <MemInputs mem={mem} setMem={setMem}/>
+        {/* ⑤Tips */}
+        <div className="fdivider">Live を楽しむための Tips</div>
+        <TipsInput value={tipsText} onChange={e=>setTipsText(e.target.value)}/>
+        <button className="save-btn"   onClick={() => { doSave(); onClose();   }}>変更を保存する</button>
+        <button className="outline-btn" onClick={() => { doSave(); onGoHome(); }}>保存してホームに戻る</button>
       </div>
     </div>
   );
@@ -752,44 +861,48 @@ function LiveModal({ live:liveProp, tour, onClose, onUpdate }) {
 
 // ── 新規追加フォーム ──
 function AddForm({ onClose, onSave, onSaveAndClose }) {
-  const [tourName,setTourName]=useState("");
-  const [date,setDate]=useState("");
-  const [startTime,setStartTime]=useState("18:00");
-  const [venue,setVenue]=useState("");
-  const [block,setBlock]=useState("");
-  const [seatNo,setSeatNo]=useState("");
-  const [setlist,setSetlist]=useState("");
-  const [mem,setMem]=useState({before:"",after:"",highlight:"",other:""});
-  const {photos,handleAdd,handleRemove}=usePhotoUpload([]);
+  const [tourName,  setTourName]  = useState("");
+  const [date,      setDate]      = useState("");
+  const [startTime, setStartTime] = useState("18:00");
+  const [venue,     setVenue]     = useState("");
+  const [setlist,   setSetlist]   = useState("");
+  const [block,     setBlock]     = useState("");
+  const [seatNo,    setSeatNo]    = useState("");
+  const [mem,       setMem]       = useState({before:"",after:"",highlight:"",other:""});
+  const [tipsText,  setTipsText]  = useState("");
+  const { photos, handleAdd, handleRemove } = usePhotoUpload([]);
 
-  const buildLive=()=>{
-    if (!tourName.trim()||!date||!venue.trim()){alert("ツアー名・日付・会場は必須です");return null;}
-    const songs=setlist.split("\n").map(l=>l.trim()).filter(Boolean).map((line,i)=>{
-      const e=/アンコール/i.test(line);
-      const t=line.replace(/^\d+\.\s*/,"").replace(/\s*[\[［]アンコール[\]］]/i,"");
-      return {n:i+1,t,...(e?{e:true}:{})};
+  const buildLive = () => {
+    if (!tourName.trim()||!date||!venue.trim()) { alert("ツアー名・日付・会場は必須です"); return null; }
+    const songs = setlist.split("\n").map(l=>l.trim()).filter(Boolean).map((line,i) => {
+      const e = /アンコール/i.test(line);
+      const t = line.replace(/^\d+\.\s*/,"").replace(/\s*[\[［]アンコール[\]］]/i,"");
+      return { n:i+1, t, ...(e?{e:true}:{}) };
     });
-    const [y,m,d]=date.split("-");
+    const [y,m,d] = date.split("-");
     return {
-      id:`user-${Date.now()}`,date:`${y}.${m}.${d}`,dateLabel:`${y}年${parseInt(m)}月${parseInt(d)}日`,
-      start:startTime,venue:venue.trim(),
+      id:`user-${Date.now()}`, date:`${y}.${m}.${d}`, dateLabel:`${y}年${parseInt(m)}月${parseInt(d)}日`,
+      start:startTime, venue:venue.trim(),
       seat:[block,seatNo].filter(Boolean).join(" / 座席")||"未設定",
-      highlight:null,tag:venue.trim().slice(0,3),emoji:"🎤",
-      songs,memory:{before:mem.before.trim(),after:mem.after.trim(),highlight:mem.highlight.trim(),other:mem.other.trim()},
-      photos,
+      highlight:null, tag:venue.trim().slice(0,3), emoji:"🎤",
+      songs, photos,
+      memory:{ before:mem.before.trim(), after:mem.after.trim(), highlight:mem.highlight.trim(), other:mem.other.trim() },
+      tips:parseTips(tipsText),
     };
   };
 
-  const reset=()=>{
-    setTourName("");setDate("");setStartTime("18:00");setVenue("");
-    setBlock("");setSeatNo("");setSetlist("");setMem({before:"",after:"",highlight:"",other:""});
+  const reset = () => {
+    setTourName(""); setDate(""); setStartTime("18:00"); setVenue("");
+    setSetlist(""); setBlock(""); setSeatNo("");
+    setMem({before:"",after:"",highlight:"",other:""}); setTipsText("");
   };
 
   return (
     <div className="overlay" onClick={onClose}>
-      <div className="modal" onClick={e=>e.stopPropagation()}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
         <div className="modal-handle"/>
         <div className="mhero red"><div className="mdate">NEW ENTRY</div><div className="mtitle">ライブを記録する</div></div>
+        {/* 基本情報 */}
         <div className="fsec">
           <label className="flbl">ツアー・公演名 *</label>
           <input className="finp" placeholder="例: TVXQ! WORLD TOUR — CIRCLE" value={tourName} onChange={e=>setTourName(e.target.value)}/>
@@ -800,31 +913,34 @@ function AddForm({ onClose, onSave, onSaveAndClose }) {
             <div className="fgrp"><label className="flbl">開演時刻</label><input className="finp" type="time" value={startTime} onChange={e=>setStartTime(e.target.value)}/></div>
           </div>
         </div>
-        <div className="fsec"><label className="flbl">会場 *</label><input className="finp" placeholder="例: 東京ドーム" value={venue} onChange={e=>setVenue(e.target.value)}/></div>
         <div className="fsec">
-          <label className="flbl">セットリスト（1曲ずつ改行）</label>
+          <label className="flbl">会場 *</label>
+          <input className="finp" placeholder="例: 東京ドーム" value={venue} onChange={e=>setVenue(e.target.value)}/>
+        </div>
+        {/* ①セットリスト */}
+        <div className="fdivider">セットリスト</div>
+        <div className="fsec">
           <textarea className="finp" rows={5} placeholder={"1. Mirotic\n2. Rising Sun\n3. Before U Go  [アンコール]"} style={{resize:"none",lineHeight:1.8}} value={setlist} onChange={e=>setSetlist(e.target.value)}/>
         </div>
+        {/* ②座席 */}
+        <div className="fdivider">座席</div>
         <div className="fsec">
           <div className="frow">
             <div className="fgrp"><label className="flbl">ブロック / 列</label><input className="finp" placeholder="C列 12番" value={block} onChange={e=>setBlock(e.target.value)}/></div>
             <div className="fgrp"><label className="flbl">座席番号</label><input className="finp" placeholder="34" value={seatNo} onChange={e=>setSeatNo(e.target.value)}/></div>
           </div>
         </div>
+        {/* ③写真 */}
         <div className="fdivider">写真</div>
         <PhotoEditor photos={photos} onAdd={handleAdd} onRemove={handleRemove}/>
+        {/* ④思い出メモ */}
         <div className="fdivider">思い出メモ</div>
-        {MEM_FIELDS.map(({key,icon,label})=>(
-          <div key={key} className="fsec">
-            <label className="flbl"><span>{icon}</span>{label}</label>
-            <textarea className="finp" rows={3} style={{resize:"none",lineHeight:1.8}}
-              value={mem[key]} onChange={e=>setMem(prev=>({...prev,[key]:e.target.value}))}
-              placeholder={key==="before"?"ライブ前の気持ち…":key==="after"?"終わった後の感情…":key==="highlight"?"特に印象に残った瞬間…":"その他なんでも…"}
-            />
-          </div>
-        ))}
-        <button className="save-btn" onClick={()=>{const l=buildLive();if(l){onSave(tourName.trim(),l);reset();}}}>記録を保存する（続けて入力）</button>
-        <button className="outline-btn" onClick={()=>{const l=buildLive();if(l){onSaveAndClose(tourName.trim(),l);}}}>保存して閉じる</button>
+        <MemInputs mem={mem} setMem={setMem}/>
+        {/* ⑤Tips */}
+        <div className="fdivider">Live を楽しむための Tips</div>
+        <TipsInput value={tipsText} onChange={e=>setTipsText(e.target.value)}/>
+        <button className="save-btn"    onClick={() => { const l=buildLive(); if(l){ onSave(tourName.trim(),l); reset(); } }}>記録を保存する（続けて入力）</button>
+        <button className="outline-btn" onClick={() => { const l=buildLive(); if(l){ onSaveAndClose(tourName.trim(),l); } }}>保存して閉じる</button>
       </div>
     </div>
   );
@@ -835,40 +951,37 @@ function AddForm({ onClose, onSave, onSaveAndClose }) {
 // ─────────────────────────────────────────────
 
 export default function App() {
-  const [selected,setSelected]=useState(null);
-  const [showAdd,setShowAdd]=useState(false);
-  const [userLives,setUserLives]=useState(()=>loadUserLives());
+  const [selected,  setSelected]  = useState(null);
+  const [showAdd,   setShowAdd]   = useState(false);
+  const [userLives, setUserLives] = useState(() => loadUserLives());
 
-  const allTours=useMemo(()=>{
-    if (userLives.length===0) return TOURS;
-    const map=new Map(TOURS.map(t=>[t.name,{...t,lives:[...t.lives]}]));
-    userLives.forEach(ul=>{
+  const allTours = useMemo(() => {
+    if (userLives.length === 0) return TOURS;
+    const map = new Map(TOURS.map(t => [t.name, {...t, lives:[...t.lives]}]));
+    userLives.forEach(ul => {
       if (map.has(ul.tourName)) map.get(ul.tourName).lives.push(ul.live);
-      else map.set(ul.tourName,{id:`tour-user-${ul.tourName}`,name:ul.tourName,year:ul.live.date.slice(0,4),color:"#8b0d1c",lives:[ul.live]});
+      else map.set(ul.tourName, {id:`tour-user-${ul.tourName}`,name:ul.tourName,year:ul.live.date.slice(0,4),color:"#8b0d1c",lives:[ul.live]});
     });
     return Array.from(map.values());
-  },[userLives]);
+  }, [userLives]);
 
-  const totalLives=allTours.reduce((s,t)=>s+t.lives.length,0);
-  const totalSongs=allTours.reduce((s,t)=>s+t.lives.reduce((ss,l)=>ss+l.songs.length,0),0);
+  const totalLives = allTours.reduce((s,t) => s+t.lives.length, 0);
+  const totalSongs = allTours.reduce((s,t) => s+t.lives.reduce((ss,l)=>ss+l.songs.length,0), 0);
 
-  const handleSave=(tourName,newLive)=>{
-    const updated=[...userLives,{tourName,live:newLive}];
-    setUserLives(updated);
-    saveUserLives(updated);
+  const handleSave = (tourName, newLive) => {
+    const updated = [...userLives, {tourName, live:newLive}];
+    setUserLives(updated); saveUserLives(updated);
   };
 
-  const handleSaveAndClose=(tourName,newLive)=>{
-    handleSave(tourName,newLive);
-    setShowAdd(false);
+  const handleSaveAndClose = (tourName, newLive) => {
+    handleSave(tourName, newLive); setShowAdd(false);
   };
 
-  const handleUpdate=(liveId,changes)=>{
-    const updated=userLives.map(ul=>ul.live.id===liveId?{...ul,live:{...ul.live,...changes}}:ul);
-    setUserLives(updated);
-    saveUserLives(updated);
-    if (selected&&selected.live.id===liveId)
-      setSelected(prev=>({...prev,live:{...prev.live,...changes}}));
+  const handleUpdate = (liveId, changes) => {
+    const updated = userLives.map(ul => ul.live.id===liveId ? {...ul, live:{...ul.live,...changes}} : ul);
+    setUserLives(updated); saveUserLives(updated);
+    if (selected && selected.live.id===liveId)
+      setSelected(prev => ({...prev, live:{...prev.live,...changes}}));
   };
 
   return (
@@ -879,7 +992,7 @@ export default function App() {
           <div className="hdr-vis">
             <div className="hdr-aktf"><span>Always Keep the Faith</span></div>
             <div className="hdr-tdots">
-              {T_DOTS.map(({key,lit,color})=>(
+              {T_DOTS.map(({key,lit,color}) => (
                 <div key={key} className="hdr-dot" style={{background:lit?color:"rgba(255,255,255,.04)",opacity:lit?.8:1}}/>
               ))}
             </div>
@@ -894,19 +1007,19 @@ export default function App() {
                 <div><div className="stat-n">{totalSongs}</div><div className="stat-l">SONGS</div></div>
                 <div><div className="stat-n">{allTours.length}</div><div className="stat-l">TOURS</div></div>
               </div>
-              <button className="add-btn" onClick={()=>{setShowAdd(true);setSelected(null);}}>＋</button>
+              <button className="add-btn" onClick={() => { setShowAdd(true); setSelected(null); }}>＋</button>
             </div>
           </div>
         </div>
         <div className="content">
           <div className="sec-lbl">ツアー</div>
-          {allTours.map(tour=>(
+          {allTours.map(tour => (
             <TourCard key={tour.id} tour={tour}
-              onLiveSelect={(live,tour)=>{setSelected({live,tour});setShowAdd(false);}}/>
+              onLiveSelect={(live,tour) => { setSelected({live,tour}); setShowAdd(false); }}/>
           ))}
         </div>
-        {selected&&<LiveModal live={selected.live} tour={selected.tour} onClose={()=>setSelected(null)} onUpdate={handleUpdate}/>}
-        {showAdd&&<AddForm onClose={()=>setShowAdd(false)} onSave={handleSave} onSaveAndClose={handleSaveAndClose}/>}
+        {selected && <LiveModal live={selected.live} tour={selected.tour} onClose={() => setSelected(null)} onUpdate={handleUpdate}/>}
+        {showAdd   && <AddForm  onClose={() => setShowAdd(false)} onSave={handleSave} onSaveAndClose={handleSaveAndClose}/>}
       </div>
     </>
   );
