@@ -1,4 +1,33 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// ─────────────────────────────────────────────
+//  Firebase 初期化
+// ─────────────────────────────────────────────
+
+const firebaseConfig = {
+  apiKey: "AIzaSyB9AckvcNLR4TWFXMqtI0uaSIZEF1wXhoU",
+  authDomain: "tvxq-live-archive.firebaseapp.com",
+  projectId: "tvxq-live-archive",
+  storageBucket: "tvxq-live-archive.firebasestorage.app",
+  messagingSenderId: "687624555209",
+  appId: "1:687624555209:web:0575b35d00ea4984139b18",
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getFirestore(firebaseApp);
+const DOC_REF = doc(db, "archive", "allLives");
+
+const loadFromFirestore = async () => {
+  const snap = await getDoc(DOC_REF);
+  if (snap.exists()) return snap.data().lives;
+  return null;
+};
+
+const saveToFirestore = async (lives) => {
+  await setDoc(DOC_REF, { lives });
+};
 
 // ─────────────────────────────────────────────
 //  定数・データ
@@ -277,12 +306,9 @@ const TOURS = [
 ];
 
 // ─────────────────────────────────────────────
-//  ローカルストレージ
+//  初期データ構築
 // ─────────────────────────────────────────────
 
-const LS_KEY = "tvxq_all_lives_v2";
-
-// TOURS定数から全ライブをフラットな {tourId, tourName, tourSub, tourColor, featured, live} 配列に展開
 const buildInitialAllLives = () =>
   TOURS.flatMap(t => t.lives.map(l => ({
     tourId:    t.id,
@@ -292,18 +318,6 @@ const buildInitialAllLives = () =>
     featured:  !!t.featured,
     live:      l,
   })));
-
-const loadAllLives = () => {
-  try {
-    const saved = localStorage.getItem(LS_KEY);
-    if (saved) return JSON.parse(saved);
-  } catch {}
-  return buildInitialAllLives();
-};
-
-const saveAllLives = (d) => {
-  try { localStorage.setItem(LS_KEY, JSON.stringify(d)); } catch {}
-};
 
 // ─────────────────────────────────────────────
 //  スタイル
@@ -769,7 +783,7 @@ function LiveModal({ live:liveProp, tour, onClose, onUpdate }) {
   const handleUpdate = (id, changes) => {
     const merged = { ...live, ...changes };
     setLive(merged);       // モーダル内の表示を即時更新
-    onUpdate(id, changes); // 親(App)のallLivesとlocalStorageに保存
+    onUpdate(id, changes); // 親(App)のallLivesとFirestoreに保存
   };
 
   if (editing) return (
@@ -992,11 +1006,34 @@ function AddForm({ onClose, onSave, onSaveAndClose }) {
 // ─────────────────────────────────────────────
 
 export default function App() {
-  const [selected,  setSelected]  = useState(null); // { entry, tour }
+  const [selected,  setSelected]  = useState(null);
   const [showAdd,   setShowAdd]   = useState(false);
-  const [allLives,  setAllLives]  = useState(() => loadAllLives());
+  const [allLives,  setAllLives]  = useState([]);
+  const [loading,   setLoading]   = useState(true);
+  const [error,     setError]     = useState(null);
 
-  // allLives（フラット配列）からツアーカード用の構造を組み立てる
+  // 起動時にFirestoreからデータを取得
+  useEffect(() => {
+    (async () => {
+      try {
+        const lives = await loadFromFirestore();
+        if (lives) {
+          setAllLives(lives);
+        } else {
+          // 初回：初期データをFirestoreに書き込む
+          const initial = buildInitialAllLives();
+          await saveToFirestore(initial);
+          setAllLives(initial);
+        }
+      } catch (e) {
+        setError("データの読み込みに失敗しました。接続を確認してください。");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  // allLivesからツアーカード用の構造を組み立てる
   const allTours = useMemo(() => {
     const map = new Map();
     allLives.forEach(entry => {
@@ -1018,22 +1055,24 @@ export default function App() {
   const totalLives = allTours.reduce((s,t) => s + t.lives.length, 0);
   const totalSongs = allTours.reduce((s,t) => s + t.lives.reduce((ss,l) => ss + l.songs.length, 0), 0);
 
+  // Firestoreに保存してstateも更新
+  const persist = async (updated) => {
+    setAllLives(updated);
+    try { await saveToFirestore(updated); } catch {}
+  };
+
   // 新規ライブ追加
   const handleSave = (tourName, newLive) => {
-    const tourId = `tour-user-${tourName}`;
-    // 同名ツアーが既存の場合はそのtourIdを使う
     const existing = allLives.find(e => e.tourName === tourName);
     const entry = {
-      tourId:    existing ? existing.tourId : tourId,
-      tourName:  tourName,
+      tourId:    existing ? existing.tourId : `tour-user-${tourName}`,
+      tourName,
       tourSub:   null,
       tourColor: existing ? existing.tourColor : "#8b0d1c",
       featured:  false,
       live:      newLive,
     };
-    const updated = [...allLives, entry];
-    setAllLives(updated);
-    saveAllLives(updated);
+    persist([...allLives, entry]);
   };
 
   const handleSaveAndClose = (tourName, newLive) => {
@@ -1041,20 +1080,37 @@ export default function App() {
     setShowAdd(false);
   };
 
-  // 既存ライブの編集保存 — liveIdで確実に対象を特定して上書き
+  // 既存ライブの編集保存
   const handleUpdate = (liveId, changes) => {
     const updated = allLives.map(entry =>
       entry.live.id === liveId
         ? { ...entry, live: { ...entry.live, ...changes } }
         : entry
     );
-    setAllLives(updated);
-    saveAllLives(updated);
-    // モーダル表示中のデータも即時反映
+    persist(updated);
     if (selected && selected.live.id === liveId) {
       setSelected(prev => ({ ...prev, live: { ...prev.live, ...changes } }));
     }
   };
+
+  if (loading) return (
+    <>
+      <style>{CSS}</style>
+      <div className="app" style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh",flexDirection:"column",gap:16}}>
+        <div style={{color:"var(--red)",fontSize:28}}>♪</div>
+        <div style={{fontFamily:"Noto Serif JP,serif",fontSize:14,color:"rgba(28,10,12,.5)",letterSpacing:".12em"}}>読み込み中…</div>
+      </div>
+    </>
+  );
+
+  if (error) return (
+    <>
+      <style>{CSS}</style>
+      <div className="app" style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh",flexDirection:"column",gap:12,padding:24}}>
+        <div style={{color:"var(--red)",fontSize:14,textAlign:"center",lineHeight:1.8}}>{error}</div>
+      </div>
+    </>
+  );
 
   return (
     <>
