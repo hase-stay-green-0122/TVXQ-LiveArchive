@@ -45,13 +45,13 @@ const MEM_FIELDS = [
   { key: "other",     icon: "❤️", label: "その他"         },
 ];
 
-// T字ドット事前計算（7列×7行）
+// T字ドット事前計算（9列×7行）
 const T_DOTS = (() => {
   const C = ["#e8112d","#c0152a","#ff3355","#d42035"];
   const d = [];
   for (let r = 0; r < 7; r++)
-    for (let c = 0; c < 7; c++)
-      d.push({ key:r*7+c, lit:r<=1||(c>=2&&c<=4), color:C[(r*7+c)%4] });
+    for (let c = 0; c < 9; c++)
+      d.push({ key:r*9+c, lit:r<=1||(c>=3&&c<=5), color:C[(r*9+c)%4] });
   return d;
 })();
 
@@ -335,7 +335,7 @@ const CSS = `
   .hdr-vis::before { content:""; position:absolute; inset:0; background:radial-gradient(ellipse 180px 60px at 50% 100%,rgba(192,21,42,.4),transparent 70%),radial-gradient(ellipse 80px 120px at 35% 100%,rgba(220,30,50,.2),transparent 65%),radial-gradient(ellipse 80px 120px at 65% 100%,rgba(220,30,50,.2),transparent 65%); }
   .hdr-aktf { position:absolute; top:16px; left:0; right:0; display:flex; justify-content:center; pointer-events:none; z-index:10; }
   .hdr-aktf span { font-family:"Cormorant Garamond",serif; font-size:16px; font-style:italic; font-weight:400; letter-spacing:.38em; color:#fff; white-space:nowrap; text-shadow:0 0 24px rgba(232,17,45,.9),0 0 8px rgba(232,17,45,.6),0 1px 4px rgba(0,0,0,.9); }
-  .hdr-tdots { position:absolute; bottom:28px; left:50%; transform:translateX(-50%); display:grid; grid-template-columns:repeat(7,7px); grid-template-rows:repeat(7,7px); gap:2px; z-index:2; }
+  .hdr-tdots { position:absolute; bottom:28px; left:50%; transform:translateX(-50%); display:grid; grid-template-columns:repeat(9,7px); grid-template-rows:repeat(7,7px); gap:2px; z-index:2; }
   .hdr-dot { width:4px; height:6px; border-radius:50% 50% 30% 30%; align-self:end; }
   .hdr-silhouette { position:absolute; bottom:0; left:50%; transform:translateX(calc(-50% + 80px)); z-index:6; opacity:.92; mix-blend-mode:screen; }
   .hdr-sil { position:absolute; bottom:0; left:0; right:0; height:60px; z-index:1; }
@@ -954,7 +954,34 @@ function EditForm({ live, onClose, onGoHome, onUpdate }) {
 }
 
 // ── 新規追加フォーム ──
-function AddForm({ onClose, onSave, onSaveAndClose }) {
+// 新規追加用・保存してホームに戻るボタン（フィードバック付き）
+function AddSaveButton({ buildLive, tourName, onSaveAndClose }) {
+  const [state, setState] = useState("idle");
+
+  const handleClick = () => {
+    if (state !== "idle") return;
+    const l = buildLive();
+    setState("saving");
+    onSaveAndClose(tourName.trim() || "未設定", l);
+    setTimeout(() => setState("done"), 400);
+  };
+
+  const label = state === "saving" ? "保存中…"
+              : state === "done"   ? "✓ 保存しました！"
+              : "🏠 保存してホームに戻る";
+
+  return (
+    <button
+      className={"save-btn" + (state !== "idle" ? " saving" : "")}
+      style={{marginBottom:24, ...(state === "done" ? {background:"linear-gradient(135deg,#2a8a3e,#1a6b2e)"} : {})}}
+      onClick={handleClick}
+    >
+      {label}
+    </button>
+  );
+}
+
+function AddForm({ onClose, onSaveAndClose }) {
   const [tourName,  setTourName]  = useState("");
   const [date,      setDate]      = useState("");
   const [startTime, setStartTime] = useState("18:00");
@@ -1040,8 +1067,7 @@ function AddForm({ onClose, onSave, onSaveAndClose }) {
         {/* ⑤Tips */}
         <div className="fdivider">Live を楽しむための Tips</div>
         <TipsInput value={tipsText} onChange={e=>setTipsText(e.target.value)}/>
-        <button className="save-btn"    onClick={() => { const l=buildLive(); onSave(tourName.trim()||"未設定",l); reset(); }}>記録を保存する（続けて入力）</button>
-        <button className="outline-btn" onClick={() => { const l=buildLive(); onSaveAndClose(tourName.trim()||"未設定",l); }}>保存して閉じる</button>
+        <AddSaveButton buildLive={buildLive} tourName={tourName} onSaveAndClose={onSaveAndClose}/>
       </div>
     </div>
   );
@@ -1198,7 +1224,6 @@ export default function App() {
         {showAdd && (
           <AddForm
             onClose={() => setShowAdd(false)}
-            onSave={handleSave}
             onSaveAndClose={(tourName, newLive) => { handleSave(tourName, newLive); setShowAdd(false); }}
           />
         )}
