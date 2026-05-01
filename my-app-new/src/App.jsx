@@ -518,14 +518,6 @@ const CSS = `
   .color-preset.selected { border-color:var(--ink); transform:scale(1.15); }
 
   /* ビジュアルタイプ選択 */
-  .vis-type-opts { display:flex; flex-direction:column; gap:10px; }
-  .vis-type-opt { display:flex; align-items:flex-start; gap:12px; padding:14px 16px; border:1.5px solid rgba(192,21,42,.12); border-radius:12px; cursor:pointer; background:var(--offwhite); transition:border-color .15s; }
-  .vis-type-opt.selected { border-color:var(--red); background:rgba(192,21,42,.04); }
-  .vis-type-radio { width:18px; height:18px; border-radius:50%; border:2px solid rgba(192,21,42,.3); flex-shrink:0; margin-top:2px; display:flex; align-items:center; justify-content:center; }
-  .vis-type-radio.selected { border-color:var(--red); background:var(--red); }
-  .vis-type-radio.selected::after { content:""; width:6px; height:6px; border-radius:50%; background:#fff; }
-  .vis-type-label { font-size:14px; font-weight:600; color:var(--ink); }
-  .vis-type-sub { font-size:11px; color:rgba(28,10,12,.45); margin-top:2px; line-height:1.5; }
 
   /* プレビューダイアログ */
   .preview-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:200; display:flex; align-items:center; justify-content:center; padding:20px; backdrop-filter:blur(6px); }
@@ -533,7 +525,6 @@ const CSS = `
   .preview-vis-wrap { width:100%; height:140px; overflow:hidden; position:relative; }
   .preview-body { padding:20px 22px 24px; }
   .preview-ttl { font-family:"Noto Serif JP",serif; font-size:15px; font-weight:600; color:var(--ink); margin-bottom:6px; }
-  .preview-sub { font-size:12px; color:rgba(28,10,12,.45); margin-bottom:18px; }
   .preview-btns { display:flex; gap:10px; }
   .preview-retry { flex:1; background:transparent; border:1.5px solid rgba(28,10,12,.2); color:rgba(28,10,12,.6); border-radius:10px; padding:12px; font-size:13px; cursor:pointer; }
   .preview-confirm { flex:1; background:var(--red); border:none; color:#fff; border-radius:10px; padding:12px; font-size:13px; cursor:pointer; font-weight:600; }
@@ -545,7 +536,6 @@ const CSS = `
   .tour-del:hover { background:rgba(192,21,42,.4); color:#fff; }
   .tour-del-tip { position:absolute; right:32px; top:50%; transform:translateY(-50%); background:rgba(28,10,12,.92); color:#fff; font-size:11px; padding:4px 10px; border-radius:6px; white-space:nowrap; pointer-events:none; opacity:0; transition:opacity .15s; }
   .tour-del-wrap:hover .tour-del-tip { opacity:1; }
-  .outline-btn { width:calc(100% - 40px); margin:10px 20px 0; background:transparent; border:1.5px solid var(--red); color:var(--red); border-radius:12px; padding:14px; font-family:"Noto Serif JP",serif; font-size:14px; letter-spacing:.1em; cursor:pointer; }
 `;
 
 // ─────────────────────────────────────────────
@@ -1418,14 +1408,14 @@ function AddMenu({ onClose, onSelectLive, onSelectTour }) {
 }
 
 // 新規追加用・保存してホームに戻るボタン（フィードバック付き）
-function AddSaveButton({ buildLive, tourName, onSaveAndClose }) {
+function AddSaveButton({ buildLive, onSaveAndClose }) {
   const [state, setState] = useState("idle");
 
   const handleClick = () => {
     if (state !== "idle") return;
     const l = buildLive();
     setState("saving");
-    onSaveAndClose(tourName.trim() || "未設定", l);
+    onSaveAndClose(null, l);
     setTimeout(() => setState("done"), 400);
   };
 
@@ -1444,8 +1434,9 @@ function AddSaveButton({ buildLive, tourName, onSaveAndClose }) {
   );
 }
 
-function AddForm({ onClose, onSaveAndClose }) {
-  const [tourName,  setTourName]  = useState("");
+function AddForm({ onClose, onSaveAndClose, allTours }) {
+  const [step,      setStep]      = useState("select"); // "select" | "input"
+  const [selTour,   setSelTour]   = useState(null);     // 選択されたツアーentry
   const [date,      setDate]      = useState("");
   const [startTime, setStartTime] = useState("18:00");
   const [venue,     setVenue]     = useState("");
@@ -1477,13 +1468,8 @@ function AddForm({ onClose, onSaveAndClose }) {
     };
   };
 
-  const reset = () => {
-    setTourName(""); setDate(""); setStartTime("18:00"); setVenue("");
-    setSetlist(""); setBlock(""); setSeatNo("");
-    setMem({before:"",after:"",highlight:"",other:""}); setTipsText("");
-  };
-
-  return (
+  // ── ステップ1：ツアー選択 ──
+  if (step === "select") return (
     <div className="overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()}>
         <div className="modal-nav">
@@ -1492,11 +1478,38 @@ function AddForm({ onClose, onSaveAndClose }) {
             <button className="nav-back" onClick={onClose}>ホームに戻る</button>
           </div>
         </div>
-        <div className="mhero red"><div className="mdate">NEW ENTRY</div><div className="mtitle">ライブを記録する</div></div>
-        {/* 基本情報 */}
-        <div className="fsec">
-          <label className="flbl">ツアー・公演名</label>
-          <input className="finp" placeholder="例: TVXQ! WORLD TOUR — CIRCLE" value={tourName} onChange={e=>setTourName(e.target.value)}/>
+        <div className="mhero red"><div className="mdate">STEP 1 / 2</div><div className="mtitle">追加先のツアーを選択</div></div>
+        <div style={{padding:"16px 18px 32px",display:"flex",flexDirection:"column",gap:10}}>
+          {allTours.map(tour => (
+            <button key={tour.id}
+              style={{display:"flex",alignItems:"center",gap:14,padding:"14px 16px",background:"var(--offwhite)",border:`1.5px solid ${tour.color}44`,borderRadius:12,cursor:"pointer",textAlign:"left",width:"100%"}}
+              onClick={() => { setSelTour(tour); setStep("input"); }}>
+              <div style={{width:10,height:10,borderRadius:"50%",background:tour.color,flexShrink:0}}/>
+              <div>
+                <div style={{fontFamily:"Noto Serif JP,serif",fontSize:14,fontWeight:600,color:"var(--ink)"}}>{tour.name}</div>
+                <div style={{fontSize:11,color:"rgba(28,10,12,.4)",marginTop:2}}>{tour.lives.length}公演</div>
+              </div>
+              <div style={{marginLeft:"auto",color:"rgba(28,10,12,.25)",fontSize:18}}>›</div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── ステップ2：ライブ情報入力 ──
+  return (
+    <div className="overlay" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-nav">
+          <div className="modal-handle"/>
+          <div className="modal-nav-btns">
+            <button className="nav-back" onClick={() => setStep("select")}>ツアー選択に戻る</button>
+          </div>
+        </div>
+        <div className="mhero red">
+          <div className="mdate">STEP 2 / 2 · {selTour?.name}</div>
+          <div className="mtitle">ライブを記録する</div>
         </div>
         <div className="fsec">
           <div className="frow">
@@ -1508,12 +1521,10 @@ function AddForm({ onClose, onSaveAndClose }) {
           <label className="flbl">会場</label>
           <input className="finp" placeholder="例: 東京ドーム" value={venue} onChange={e=>setVenue(e.target.value)}/>
         </div>
-        {/* ①セットリスト */}
         <div className="fdivider">セットリスト</div>
         <div className="fsec">
           <textarea className="finp" rows={5} placeholder={"1. Mirotic\n2. Rising Sun\n3. Before U Go  [アンコール]"} style={{resize:"none",lineHeight:1.8}} value={setlist} onChange={e=>setSetlist(e.target.value)}/>
         </div>
-        {/* ②座席 */}
         <div className="fdivider">座席</div>
         <div className="fsec">
           <div className="frow">
@@ -1521,16 +1532,16 @@ function AddForm({ onClose, onSaveAndClose }) {
             <div className="fgrp"><label className="flbl">座席番号</label><input className="finp" placeholder="34" value={seatNo} onChange={e=>setSeatNo(e.target.value)}/></div>
           </div>
         </div>
-        {/* ③写真 */}
         <div className="fdivider">写真</div>
         <PhotoEditor photos={photos} onAdd={handleAdd} onRemove={handleRemove} uploading={uploading}/>
-        {/* ④思い出メモ */}
         <div className="fdivider">思い出メモ</div>
         <MemInputs mem={mem} setMem={setMem}/>
-        {/* ⑤Tips */}
         <div className="fdivider">Live を楽しむための Tips</div>
         <TipsInput value={tipsText} onChange={e=>setTipsText(e.target.value)}/>
-        <AddSaveButton buildLive={buildLive} tourName={tourName} onSaveAndClose={onSaveAndClose}/>
+        <AddSaveButton
+          buildLive={buildLive}
+          onSaveAndClose={(_, live) => onSaveAndClose(selTour, live)}
+        />
       </div>
     </div>
   );
@@ -1599,15 +1610,15 @@ export default function App() {
     try { await saveToFirestore(updated); } catch {}
   };
 
-  // 新規ライブ追加
-  const handleSave = (tourName, newLive) => {
-    const existing = allLives.find(e => e.tourName === tourName);
+  // 新規ライブ追加（selTourはallToursのtourオブジェクト）
+  const handleSave = (selTour, newLive) => {
     const entry = {
-      tourId:    existing ? existing.tourId : `tour-user-${tourName}`,
-      tourName,
-      tourSub:   null,
-      tourColor: existing ? existing.tourColor : "#8b0d1c",
-      featured:  false,
+      tourId:    selTour.id,
+      tourName:  selTour.name,
+      tourSub:   selTour.sub   || null,
+      tourColor: selTour.color,
+      featured:  selTour.featured || false,
+      svgCode:   selTour.svgCode  || null,
       live:      newLive,
     };
     persist([...allLives, entry]);
@@ -1728,7 +1739,8 @@ export default function App() {
         {showAdd && (
           <AddForm
             onClose={() => setShowAdd(false)}
-            onSaveAndClose={(tourName, newLive) => { handleSave(tourName, newLive); setShowAdd(false); }}
+            onSaveAndClose={(selTour, newLive) => { handleSave(selTour, newLive); setShowAdd(false); }}
+            allTours={allTours}
           />
         )}
         {showAddTour && (
