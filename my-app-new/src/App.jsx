@@ -411,7 +411,6 @@ const CSS = `
   .live-item-date { font-family:"Cormorant Garamond",serif; font-size:11px; color:rgba(232,17,45,.8); letter-spacing:.12em; margin-bottom:2px; }
   .live-item-venue { font-size:13px; font-weight:600; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .live-item-seat { font-size:10px; color:rgba(255,255,255,.35); margin-top:2px; }
-  .live-item-arrow { font-size:14px; color:rgba(255,255,255,.2); flex-shrink:0; }
 
   /* Modal */
   .overlay { position:fixed; inset:0; background:rgba(28,10,12,.78); z-index:100; display:flex; align-items:flex-end; backdrop-filter:blur(5px); }
@@ -1076,56 +1075,211 @@ const TOUR_COLOR_PRESETS = [
   { label:"ティール",  value:"#0a5a5a" },
 ];
 
-// ビジュアルSVGをClaude APIで生成
-async function generateTourVisual(tourName, tourSub, color, userPrompt) {
-  const prompt = userPrompt
-    ? `以下の説明に基づいて、東方神起ライブツアー「${tourName}」のビジュアルヘッダーSVGを生成してください。
-説明：${userPrompt}
-テーマカラー：${color}`
-    : `東方神起ライブツアー「${tourName}」${tourSub ? `サブタイトル「${tourSub}」` : ""}のビジュアルヘッダーSVGを、テーマカラー${color}を基調に自動生成してください。`;
+// ─────────────────────────────────────────────
+//  ビジュアルパターン定義（10種）
+// ─────────────────────────────────────────────
 
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1000,
-      system: `あなたはSVGビジュアルデザイナーです。東方神起（TVXQ!）のライブツアーのヘッダービジュアルをSVGで生成してください。
-必ず以下の仕様に従ってください：
-- viewBox="0 0 400 110" のSVGを1つだけ出力
-- 幅400px、高さ110pxの横長ビジュアル
-- 指定テーマカラーを基調とした背景グラデーション
-- ツアー名を大きく中央に表示（Cormorant Garamond風の欧文スタイル）
-- 光・粒子・波・幾何学模様などの演出を加える
-- SVGタグのみを出力し、説明文やコードブロック記号は一切含めない`,
-      messages: [{ role: "user", content: prompt }],
-    }),
-  });
-  const data = await response.json();
-  const text = data.content?.find(b => b.type === "text")?.text || "";
-  const match = text.match(/<svg[\s\S]*<\/svg>/i);
-  return match ? match[0] : null;
+const VIS_PATTERNS = [
+  {
+    keys: ["波","海","ocean","wave","うねり","水面"],
+    label: "波", emoji: "🌊",
+    render: (color, name) => {
+      const bg = colorToBg(color);
+      const c = lighten(color, 0.6);
+      const paths = [0,1,2].map(i => {
+        const y = 55 + i*16;
+        const amp = 12 - i*3;
+        return `<path d="M0 ${y} Q50 ${y-amp} 100 ${y} Q150 ${y+amp} 200 ${y} Q250 ${y-amp} 300 ${y} Q350 ${y+amp} 400 ${y}" fill="none" stroke="${c}" stroke-width="${2.5-i*0.6}" opacity="${0.5-i*0.1}"/>`;
+      }).join('');
+      return baseSvg(bg, paths + centerText(name, '#fff'));
+    }
+  },
+  {
+    keys: ["星","スター","star","night","夜空","銀河","galaxy"],
+    label: "星空", emoji: "✨",
+    render: (color, name) => {
+      const bg = colorToBg(color);
+      const stars = Array.from({length:28}, (_,i) => {
+        const x = (i*137.5)%400; const y = (i*97.3)%90;
+        const r = i%5===0?2.5:i%3===0?1.8:1.2;
+        const op = 0.4+((i*31)%60)/100;
+        return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="#fff" opacity="${op.toFixed(2)}"/>`;
+      }).join('');
+      const shine = `<circle cx="320" cy="22" r="14" fill="${lighten(color,0.8)}" opacity="0.18"/><circle cx="320" cy="22" r="6" fill="#fff" opacity="0.35"/>`;
+      return baseSvg(bg, stars + shine + centerText(name, '#fff'));
+    }
+  },
+  {
+    keys: ["渦","spiral","螺旋","swirl","回転","vortex"],
+    label: "渦", emoji: "🌀",
+    render: (color, name) => {
+      const bg = colorToBg(color);
+      const c = lighten(color, 0.7);
+      const dots = Array.from({length:36}, (_,i) => {
+        const angle = (i/36)*Math.PI*2*3;
+        const dist = 8 + i*1.6;
+        const cx = 200 + Math.cos(angle)*dist;
+        const cy = 55 + Math.sin(angle)*dist*0.55;
+        const r = 1.2 + (1-i/36)*2;
+        return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" fill="${c}" opacity="${(0.2+i/36*0.7).toFixed(2)}"/>`;
+      }).join('');
+      return baseSvg(bg, dots + centerText(name, '#fff'));
+    }
+  },
+  {
+    keys: ["雨","rain","しずく","drop","rainfall"],
+    label: "雨", emoji: "🌧",
+    render: (color, name) => {
+      const bg = colorToBg(color);
+      const c = lighten(color, 0.7);
+      const lines = Array.from({length:22}, (_,i) => {
+        const x = (i*19+5)%410; const y = (i*31)%60;
+        return `<line x1="${x}" y1="${y}" x2="${x-6}" y2="${y+22}" stroke="${c}" stroke-width="1.2" opacity="${0.25+((i*7)%40)/100}"/>`;
+      }).join('');
+      return baseSvg(bg, lines + centerText(name, '#fff'));
+    }
+  },
+  {
+    keys: ["炎","fire","flame","情熱","burn","熱"],
+    label: "炎", emoji: "🔥",
+    render: (color, name) => {
+      const bg = colorToBg(color);
+      const flames = Array.from({length:10}, (_,i) => {
+        const x = 30 + i*38; const h = 20 + (i%3)*18;
+        const w = 10 + (i%4)*5;
+        return `<path d="M${x} 110 Q${x-w} ${110-h*0.6} ${x} ${110-h} Q${x+w} ${110-h*0.6} ${x} 110" fill="${lighten(color,0.5)}" opacity="${0.15+((i*13)%30)/100}"/>`;
+      }).join('');
+      return baseSvg(bg, flames + centerText(name, '#fff'));
+    }
+  },
+  {
+    keys: ["格子","grid","幾何学","geometric","lattice","mesh"],
+    label: "格子", emoji: "⬛",
+    render: (color, name) => {
+      const bg = colorToBg(color);
+      const c = lighten(color, 0.5);
+      const hlines = Array.from({length:6}, (_,i) =>
+        `<line x1="0" y1="${i*22}" x2="400" y2="${i*22}" stroke="${c}" stroke-width="0.8" opacity="0.25"/>`).join('');
+      const vlines = Array.from({length:14}, (_,i) =>
+        `<line x1="${i*30}" y1="0" x2="${i*30}" y2="110" stroke="${c}" stroke-width="0.8" opacity="0.25"/>`).join('');
+      const dots = Array.from({length:42}, (_,i) => {
+        const x = (i%14)*30; const y = Math.floor(i/14)*22;
+        return `<circle cx="${x}" cy="${y}" r="1.5" fill="${c}" opacity="0.4"/>`;
+      }).join('');
+      return baseSvg(bg, hlines+vlines+dots + centerText(name, '#fff'));
+    }
+  },
+  {
+    keys: ["爆発","burst","放射","radiation","explosion","エネルギー"],
+    label: "爆発", emoji: "💥",
+    render: (color, name) => {
+      const bg = colorToBg(color);
+      const c = lighten(color, 0.7);
+      const rays = Array.from({length:18}, (_,i) => {
+        const angle = (i/18)*Math.PI*2;
+        const x1 = 200 + Math.cos(angle)*15;
+        const y1 = 55 + Math.sin(angle)*10;
+        const x2 = 200 + Math.cos(angle)*(60+(i%3)*25);
+        const y2 = 55 + Math.sin(angle)*(40+(i%3)*15);
+        return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${c}" stroke-width="${1.5-(i%3)*0.3}" opacity="${0.25+((i*11)%40)/100}"/>`;
+      }).join('');
+      const core = `<circle cx="200" cy="55" r="8" fill="${c}" opacity="0.35"/><circle cx="200" cy="55" r="3" fill="#fff" opacity="0.6"/>`;
+      return baseSvg(bg, rays + core + centerText(name, '#fff'));
+    }
+  },
+  {
+    keys: ["粒子","particle","浮遊","float","bubble","泡"],
+    label: "粒子", emoji: "🫧",
+    render: (color, name) => {
+      const bg = colorToBg(color);
+      const c = lighten(color, 0.75);
+      const particles = Array.from({length:32}, (_,i) => {
+        const x = (i*127.3)%390+5; const y = (i*83.7)%100+5;
+        const r = 1+(i%5)*0.8;
+        const op = 0.15+((i*17)%55)/100;
+        return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="${c}" opacity="${op.toFixed(2)}"/>`;
+      }).join('');
+      return baseSvg(bg, particles + centerText(name, '#fff'));
+    }
+  },
+  {
+    keys: ["桜","花","bloom","flower","petal","spring","春"],
+    label: "桜", emoji: "🌸",
+    render: (color, name) => {
+      const bg = colorToBg(color);
+      const petals = Array.from({length:16}, (_,i) => {
+        const x = (i*113.7+20)%380; const y = (i*67.3+10)%90;
+        const angle = (i*47)%360;
+        const size = 4+(i%4)*2;
+        return `<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="${size}" ry="${(size*0.6).toFixed(1)}" fill="${lighten(color,0.65)}" opacity="${(0.2+((i*13)%40)/100).toFixed(2)}" transform="rotate(${angle} ${x.toFixed(1)} ${y.toFixed(1)})"/>`;
+      }).join('');
+      return baseSvg(bg, petals + centerText(name, '#fff'));
+    }
+  },
+  {
+    keys: ["光","光線","beam","ray","shine","輝き","glow"],
+    label: "光線", emoji: "✴️",
+    render: (color, name) => {
+      const bg = colorToBg(color);
+      const beams = Array.from({length:5}, (_,i) => {
+        const x = 60 + i*70;
+        return `<line x1="${x}" y1="0" x2="${x+40}" y2="110" stroke="${lighten(color,0.8)}" stroke-width="${6-i*0.5}" opacity="${0.08+i*0.02}"/>`;
+      }).join('');
+      const glow = `<ellipse cx="200" cy="0" rx="180" ry="40" fill="${lighten(color,0.6)}" opacity="0.12"/>`;
+      return baseSvg(bg, glow + beams + centerText(name, '#fff'));
+    }
+  },
+];
+
+// ユーティリティ
+function colorToBg(color) {
+  return `<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${darken(color,0.4)}"/><stop offset="100%" stop-color="${darken(color,0.15)}"/></linearGradient></defs><rect width="400" height="110" fill="url(#bg)"/>`;
+}
+function darken(hex, amt) {
+  const r = Math.max(0, parseInt(hex.slice(1,3),16) - Math.round(amt*160));
+  const g = Math.max(0, parseInt(hex.slice(3,5),16) - Math.round(amt*160));
+  const b = Math.max(0, parseInt(hex.slice(5,7),16) - Math.round(amt*160));
+  return '#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
+}
+function lighten(hex, amt) {
+  const r = Math.min(255, parseInt(hex.slice(1,3),16) + Math.round(amt*220));
+  const g = Math.min(255, parseInt(hex.slice(3,5),16) + Math.round(amt*220));
+  const b = Math.min(255, parseInt(hex.slice(5,7),16) + Math.round(amt*220));
+  return '#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
+}
+function centerText(name, color) {
+  const display = name || "NEW TOUR";
+  const fontSize = display.length > 20 ? 16 : display.length > 12 ? 20 : 26;
+  return `<text x="200" y="62" text-anchor="middle" dominant-baseline="middle" font-family="Cormorant Garamond,serif" font-size="${fontSize}" font-style="italic" fill="${color}" opacity="0.92" letter-spacing="3">${display}</text>`;
+}
+function baseSvg(bg, content) {
+  return `<svg viewBox="0 0 400 110" xmlns="http://www.w3.org/2000/svg">${bg}${content}</svg>`;
 }
 
-function TourVisPreviewDialog({ tourName, tourSub, color, svgCode, onRetry, onConfirm, generating }) {
+// キーワード解析して即時SVG生成（API不要）
+function generateTourVisualSync(tourName, color, userPrompt) {
+  const text = (userPrompt || tourName || "").toLowerCase();
+  // キーワードマッチング（複数マッチは最初を優先）
+  const matched = VIS_PATTERNS.find(p => p.keys.some(k => text.includes(k)));
+  const pattern = matched || VIS_PATTERNS[7]; // デフォルト：粒子
+  return pattern.render(color, tourName);
+}
+
+function TourVisPreviewDialog({ tourName, color, svgCode, onRetry, onConfirm }) {
   return (
     <div className="preview-overlay" onClick={e => e.stopPropagation()}>
       <div className="preview-dialog">
         <div className="preview-vis-wrap">
-          {generating || !svgCode
-            ? <div className="preview-loading">
-                <div style={{width:32,height:32,border:"3px solid rgba(255,255,255,.2)",borderTopColor:color,borderRadius:"50%",animation:"spin .8s linear infinite"}}/>
-                <div style={{color:"rgba(255,255,255,.5)",fontSize:12}}>ビジュアル生成中…</div>
-              </div>
-            : <div dangerouslySetInnerHTML={{__html:svgCode}} style={{width:"100%",height:"100%"}}/>
+          {svgCode
+            ? <div dangerouslySetInnerHTML={{__html:svgCode}} style={{width:"100%",height:"100%"}}/>
+            : <div className="preview-loading"><div style={{color:"rgba(255,255,255,.4)",fontSize:12}}>生成中…</div></div>
           }
         </div>
         <div className="preview-body">
           <div className="preview-ttl">{tourName||"ツアー名未設定"}</div>
-          {tourSub && <div className="preview-sub">{tourSub}</div>}
           <div className="preview-btns">
-            <button className="preview-retry" onClick={onRetry} disabled={generating}>🔄 やり直す</button>
-            <button className="preview-confirm" onClick={onConfirm} disabled={generating}>✓ これで追加する</button>
+            <button className="preview-retry" onClick={onRetry}>🔄 別パターン</button>
+            <button className="preview-confirm" onClick={onConfirm}>✓ これで追加する</button>
           </div>
         </div>
       </div>
@@ -1134,28 +1288,27 @@ function TourVisPreviewDialog({ tourName, tourSub, color, svgCode, onRetry, onCo
 }
 
 function AddTourForm({ onClose, onSaveTour }) {
-  const [tourName,  setTourName]  = useState("");
-  const [tourSub,   setTourSub]   = useState("");
-  const [color,     setColor]     = useState("#c0152a");
-  const [visType,   setVisType]   = useState("auto"); // "auto" | "manual"
-  const [userPrompt,setUserPrompt]= useState("");
-  const [preview,   setPreview]   = useState(false);
-  const [svgCode,   setSvgCode]   = useState(null);
-  const [generating,setGenerating]= useState(false);
-  const [state,     setState]     = useState("idle");
+  const [tourName,   setTourName]   = useState("");
+  const [tourSub,    setTourSub]    = useState("");
+  const [color,      setColor]      = useState("#c0152a");
+  const [userPrompt, setUserPrompt] = useState("");
+  const [preview,    setPreview]    = useState(false);
+  const [svgCode,    setSvgCode]    = useState(null);
+  const [state,      setState]      = useState("idle");
 
-  const handleGenerate = async () => {
+  const handleGenerate = () => {
+    const svg = generateTourVisualSync(tourName, color, userPrompt);
+    setSvgCode(svg);
     setPreview(true);
-    setSvgCode(null);
-    setGenerating(true);
-    try {
-      const svg = await generateTourVisual(tourName, tourSub, color, visType === "manual" ? userPrompt : null);
-      setSvgCode(svg);
-    } catch {
-      setSvgCode(null);
-    } finally {
-      setGenerating(false);
-    }
+  };
+
+  // 別パターン：マッチしなかった他のパターンをランダムに試す
+  const handleRetry = () => {
+    const text = (userPrompt || tourName || "").toLowerCase();
+    const matched = VIS_PATTERNS.findIndex(p => p.keys.some(k => text.includes(k)));
+    const others = VIS_PATTERNS.filter((_, i) => i !== matched);
+    const pick = others[Math.floor(Math.random() * others.length)];
+    setSvgCode(pick.render(color, tourName));
   };
 
   const handleConfirm = () => {
@@ -1174,11 +1327,10 @@ function AddTourForm({ onClose, onSaveTour }) {
 
   return (
     <>
-      {preview && (
+      {preview && svgCode && (
         <TourVisPreviewDialog
-          tourName={tourName} tourSub={tourSub} color={color}
-          svgCode={svgCode} generating={generating}
-          onRetry={handleGenerate}
+          tourName={tourName} color={color} svgCode={svgCode}
+          onRetry={handleRetry}
           onConfirm={handleConfirm}
         />
       )}
@@ -1212,34 +1364,24 @@ function AddTourForm({ onClose, onSaveTour }) {
             </div>
           </div>
 
-          <div className="fdivider">ビジュアルタイプ</div>
+          <div className="fdivider">ビジュアルイメージ</div>
           <div className="fsec">
-            <div className="vis-type-opts">
-              <div className={"vis-type-opt"+(visType==="auto"?" selected":"")} onClick={() => setVisType("auto")}>
-                <div className={"vis-type-radio"+(visType==="auto"?" selected":"")}/>
-                <div>
-                  <div className="vis-type-label">🎲 おまかせ</div>
-                  <div className="vis-type-sub">ツアー名・カラーを元にClaudeが自動でビジュアルを生成します</div>
-                </div>
-              </div>
-              <div className={"vis-type-opt"+(visType==="manual"?" selected":"")} onClick={() => setVisType("manual")}>
-                <div className={"vis-type-radio"+(visType==="manual"?" selected":"")}/>
-                <div style={{flex:1}}>
-                  <div className="vis-type-label">✍️ 自分で基調イメージを記述</div>
-                  <div className="vis-type-sub">イメージを言葉で伝えてClaudeに生成させます</div>
-                  {visType === "manual" && (
-                    <textarea className="finp" rows={3} style={{resize:"none",lineHeight:1.7,marginTop:10,fontSize:13}}
-                      placeholder="例：夜の海をイメージした深いネイビー。星が散りばめられていて、波の音が聞こえてきそうな幻想的な雰囲気"
-                      value={userPrompt} onChange={e=>setUserPrompt(e.target.value)}/>
-                  )}
-                </div>
-              </div>
+            <label className="flbl" style={{marginBottom:8}}>
+              イメージを自由に記述してください
+            </label>
+            <div style={{fontSize:11,color:"rgba(28,10,12,.38)",marginBottom:10,lineHeight:1.7}}>
+              波・星・渦・雨・炎・格子・爆発・粒子・桜・光… などのキーワードを含めると、そのパターンが適用されます。複数のキーワードも使えます。
             </div>
+            <textarea className="finp" rows={3} style={{resize:"none",lineHeight:1.8}}
+              placeholder={"例：夜の海に波が広がるような幻想的な雰囲気\n例：無数の星が輝く銀河をイメージ\n例：爆発するエネルギーと光の放射"}
+              value={userPrompt} onChange={e=>setUserPrompt(e.target.value)}/>
           </div>
 
-          <button className="save-btn" style={{marginBottom:24}}
-            onClick={handleGenerate}
-            disabled={generating}>
+          <div style={{padding:"0 20px 8px",fontSize:11,color:"rgba(28,10,12,.35)",lineHeight:1.7}}>
+            💡 記述なしでもツアー名からパターンを自動選択します
+          </div>
+
+          <button className="save-btn" style={{marginBottom:24}} onClick={handleGenerate}>
             ✨ プレビューを生成する
           </button>
         </div>
@@ -1495,7 +1637,6 @@ export default function App() {
       songs: [], photos: [],
       memory: { before:"", after:"", highlight:"", other:"" },
       tips: [],
-      isPlaceholder: true,
     };
     const entry = { ...tourMeta, live: dummyLive };
     persist([...allLives, entry]);
