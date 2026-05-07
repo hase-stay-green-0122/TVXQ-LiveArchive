@@ -395,16 +395,19 @@ const CSS = `
 
   /* Tour card */
   .tour-card { background:var(--ink); border-radius:14px; margin-bottom:12px; overflow:hidden; box-shadow:0 2px 10px var(--shadow); border:1px solid rgba(192,21,42,.2); }
-  .tour-card-hdr { display:flex; align-items:center; gap:12px; padding:14px 16px; cursor:pointer; }
-  .tour-card-bar { width:3px; height:36px; border-radius:2px; flex-shrink:0; }
+  .tour-vis-wrap { height:110px; overflow:hidden; cursor:pointer; position:relative; flex-shrink:0; }
+  .tour-vis-wrap svg { width:100%; height:100%; display:block; }
+  .tour-card-hdr { display:flex; align-items:center; gap:12px; padding:12px 16px; cursor:pointer; }
+  .tour-card-bar { width:3px; height:44px; border-radius:2px; flex-shrink:0; }
   .tour-card-info { flex:1; min-width:0; }
-  .tour-card-name { font-family:"Noto Serif JP",serif; font-size:11px; font-weight:600; color:#fff; line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .tour-card-count { font-size:10px; color:rgba(255,255,255,.5); margin-top:3px; }
+  .tour-card-name { font-family:"Noto Serif JP",serif; font-size:13px; font-weight:600; color:#fff; line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tour-card-period { font-size:11px; color:var(--gold-lt); margin-top:3px; letter-spacing:.04em; }
+  .tour-card-count { font-size:11px; color:rgba(255,255,255,.4); margin-top:2px; }
   .tour-card-arrow { font-size:18px; color:rgba(255,255,255,.3); transition:transform .2s; flex-shrink:0; }
   .tour-card-arrow.open { transform:rotate(90deg); }
 
   /* RED OCEAN visual */
-  .red-vis { height:110px; background:linear-gradient(180deg,#0a0204,#1a0208 50%,#2a0510); position:relative; overflow:hidden; cursor:pointer; }
+  .red-vis { height:110px; background:linear-gradient(180deg,#0a0204,#1a0208 50%,#2a0510); position:relative; overflow:hidden; }
   .red-vis::before { content:""; position:absolute; inset:0; background:radial-gradient(ellipse 300px 30px at 50% 85%,rgba(232,17,45,.35),transparent 70%),radial-gradient(ellipse 200px 20px at 30% 70%,rgba(192,21,42,.2),transparent 70%),radial-gradient(ellipse 200px 20px at 70% 60%,rgba(192,21,42,.2),transparent 70%); }
   .red-wm { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; z-index:1; }
   .red-wm span { font-family:"Noto Serif JP",serif; font-size:48px; font-weight:300; letter-spacing:.2em; color:rgba(255,255,255,.75); white-space:nowrap; }
@@ -414,19 +417,15 @@ const CSS = `
   .red-ocean-dots { position:absolute; bottom:30px; left:0; right:0; display:flex; justify-content:center; flex-wrap:wrap; gap:3px; padding:0 12px; z-index:2; }
   .rod { width:3px; height:8px; border-radius:2px 2px 0 0; }
   .red-badge { position:absolute; top:12px; right:12px; background:var(--gold); color:#fff; font-size:8px; font-weight:700; letter-spacing:.15em; padding:3px 9px; border-radius:3px; z-index:3; }
-  .red-label { position:absolute; bottom:10px; left:16px; font-family:"Noto Serif JP",serif; font-size:10px; color:var(--gold-lt); z-index:3; }
-  .red-arrow { position:absolute; bottom:10px; right:16px; color:rgba(255,255,255,.3); font-size:16px; z-index:3; }
 
   /* ZONE visual */
-  .zone-vis { height:110px; background:linear-gradient(160deg,#060e1c,#0d1e38 45%,#091628); position:relative; overflow:hidden; cursor:pointer; }
+  .zone-vis { height:110px; background:linear-gradient(160deg,#060e1c,#0d1e38 45%,#091628); position:relative; overflow:hidden; }
   .zone-vis::before { content:""; position:absolute; inset:0; background:radial-gradient(ellipse 160px 90px at 15% 20%,rgba(80,160,255,.14),transparent 65%),radial-gradient(ellipse 120px 70px at 85% 75%,rgba(60,130,220,.12),transparent 65%),radial-gradient(ellipse 200px 40px at 50% 100%,rgba(40,100,180,.18),transparent 70%); }
   .zone-vis::after { content:""; position:absolute; bottom:28px; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(100,170,255,.25) 30%,rgba(140,200,255,.45) 50%,rgba(100,170,255,.25) 70%,transparent); }
   .zone-wm { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; }
   .zone-wm span { font-family:"Noto Serif JP",serif; font-size:52px; font-weight:300; letter-spacing:.32em; color:rgba(255,255,255,.75); white-space:nowrap; }
   .zone-dots-svg { position:absolute; inset:0; width:100%; height:100%; }
   .zone-badge { position:absolute; top:12px; right:12px; background:rgba(80,150,255,.2); border:1px solid rgba(100,170,255,.35); color:rgba(160,210,255,.9); font-size:8px; font-weight:700; letter-spacing:.15em; padding:3px 9px; border-radius:3px; }
-  .zone-label { position:absolute; bottom:10px; left:16px; font-family:"Noto Serif JP",serif; font-size:10px; color:var(--gold-lt); }
-  .zone-arrow { position:absolute; bottom:10px; right:16px; color:rgba(100,160,255,.45); font-size:16px; }
 
   /* Lives list */
   .lives-list { border-top:1px solid rgba(255,255,255,.06); }
@@ -568,7 +567,6 @@ const CSS = `
   .preview-btns { display:flex; gap:10px; }
   .preview-retry { flex:1; background:transparent; border:1.5px solid rgba(28,10,12,.2); color:rgba(28,10,12,.6); border-radius:10px; padding:12px; font-size:13px; cursor:pointer; }
   .preview-confirm { flex:1; background:var(--red); border:none; color:#fff; border-radius:10px; padding:12px; font-size:13px; cursor:pointer; font-weight:600; }
-  .preview-loading { display:flex; align-items:center; justify-content:center; flex-direction:column; gap:10px; height:140px; background:var(--ink); }
 
   /* ツアー削除ボタン */
   .tour-del-wrap { position:relative; flex-shrink:0; margin-left:4px; }
@@ -780,7 +778,55 @@ function TourCard({ tour, onLiveSelect, onLiveDelete, onTourDelete }) {
   const [delTarget, setDelTarget] = useState(null);
   const [delTour, setDelTour] = useState(false);
   const totalSongs = tour.lives.reduce((s,l) => s+l.songs.length, 0);
+  const period = getTourPeriod(tour.lives);
   const ROD = ["#e8112d","#c0152a","#ff3355","#d42035","#ff1a40","#b00d22"];
+
+  // 統一ビジュアル（110px固定）
+  const renderVis = () => {
+    if (tour.id === "tour-20th") return (
+      <div className="tour-vis-wrap" onClick={() => setOpen(o=>!o)}>
+        <div className="red-vis" style={{height:"100%"}}>
+          <div className="red-wm"><span>RED OCEAN</span></div>
+          <div className="red-ocean-dots">
+            {Array.from({length:60}).map((_,i) => (
+              <div key={i} className="rod" style={{background:ROD[i%ROD.length],height:6+(i%5)*3,opacity:0.4+(i%4)*0.15,boxShadow:`0 0 3px ${ROD[i%ROD.length]}`}}/>
+            ))}
+          </div>
+          <div className="red-waves"><div className="red-wave"/><div className="red-wave"/><div className="red-wave"/></div>
+          <div className="red-badge">20TH ANNIVERSARY</div>
+        </div>
+      </div>
+    );
+    if (tour.id === "tour-zone") return (
+      <div className="tour-vis-wrap" onClick={() => setOpen(o=>!o)}>
+        <div className="zone-vis" style={{height:"100%"}}>
+          <div className="zone-wm"><span>ZONE</span></div>
+          <svg className="zone-dots-svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+            <circle cx="50" cy="50" r="4" fill="rgba(180,220,255,0.9)"/>
+            <circle cx="50" cy="50" r="8" fill="rgba(120,180,255,0.2)"/>
+            <circle cx="50" cy="50" r="14" fill="rgba(80,140,255,0.08)"/>
+            {ZONE_DOTS.map(({key,x,y,opacity,size}) => (
+              <circle key={key} cx={x} cy={y} r={size/2} fill={`rgba(140,200,255,${opacity})`}/>
+            ))}
+          </svg>
+          <div className="zone-badge">20TH ANNIVERSARY</div>
+        </div>
+      </div>
+    );
+    if (tour.svgCode) return (
+      <div className="tour-vis-wrap" onClick={() => setOpen(o=>!o)}
+        dangerouslySetInnerHTML={{__html:tour.svgCode}}/>
+    );
+    // フォールバック：svgCodeなしの場合もglowTextで統一デザイン
+    const c1 = darken(tour.color, 0.55), c2 = darken(tour.color, 0.2);
+    const cl = lighten(tour.color, 0.6);
+    const fallbackSvg = baseSvg(c1, c2, glowText(tour.name, cl));
+    return (
+      <div className="tour-vis-wrap" onClick={() => setOpen(o=>!o)}
+        dangerouslySetInnerHTML={{__html:fallbackSvg}}/>
+    );
+  };
+
   return (
     <div className="tour-card">
       {delTour && (
@@ -797,52 +843,13 @@ function TourCard({ tour, onLiveSelect, onLiveDelete, onTourDelete }) {
           onConfirm={() => { onLiveDelete(delTarget.id); setDelTarget(null); }}
         />
       )}
-      {tour.id === "tour-20th" && (
-        <div className="red-vis" onClick={() => setOpen(o=>!o)}>
-          <div className="red-wm"><span>RED OCEAN</span></div>
-          <div className="red-ocean-dots">
-            {Array.from({length:60}).map((_,i) => (
-              <div key={i} className="rod" style={{background:ROD[i%ROD.length],height:6+(i%5)*3,opacity:0.4+(i%4)*0.15,boxShadow:`0 0 3px ${ROD[i%ROD.length]}`}}/>
-            ))}
-          </div>
-          <div className="red-waves"><div className="red-wave"/><div className="red-wave"/><div className="red-wave"/></div>
-          <div className="red-badge">20TH ANNIVERSARY</div>
-          <div className="red-label">{getTourPeriod(tour.lives)} · 日産スタジアム · 全{tour.lives.length}公演</div>
-          <div className="red-arrow">›</div>
-        </div>
-      )}
-      {tour.id === "tour-zone" && (
-        <div className="zone-vis" onClick={() => setOpen(o=>!o)}>
-          <div className="zone-wm"><span>ZONE</span></div>
-          <svg className="zone-dots-svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
-            <circle cx="50" cy="50" r="4" fill="rgba(180,220,255,0.9)"/>
-            <circle cx="50" cy="50" r="8" fill="rgba(120,180,255,0.2)"/>
-            <circle cx="50" cy="50" r="14" fill="rgba(80,140,255,0.08)"/>
-            {ZONE_DOTS.map(({key,x,y,opacity,size}) => (
-              <circle key={key} cx={x} cy={y} r={size/2} fill={`rgba(140,200,255,${opacity})`}/>
-            ))}
-          </svg>
-          <div className="zone-badge">20TH ANNIVERSARY</div>
-          <div className="zone-label">{getTourPeriod(tour.lives)} · アリーナツアー &amp; 東京ドーム追加公演 全{tour.lives.length}公演</div>
-          <div className="zone-arrow">›</div>
-        </div>
-      )}
-      {tour.svgCode && tour.id !== "tour-20th" && tour.id !== "tour-zone" && (
-        <div style={{height:110,overflow:"hidden",cursor:"pointer"}} onClick={() => setOpen(o=>!o)}
-          dangerouslySetInnerHTML={{__html:tour.svgCode}}/>
-      )}
-      {!tour.svgCode && tour.id !== "tour-20th" && tour.id !== "tour-zone" && (
-        <div style={{height:60,background:`linear-gradient(135deg,${tour.color}cc,${tour.color}66)`,cursor:"pointer",display:"flex",alignItems:"center",padding:"0 16px"}}
-          onClick={() => setOpen(o=>!o)}>
-          <span style={{fontFamily:"Noto Serif JP,serif",fontSize:18,color:"rgba(255,255,255,.8)",fontStyle:"italic"}}>{tour.name}</span>
-        </div>
-      )}
+      {renderVis()}
       <div className="tour-card-hdr" onClick={() => setOpen(o=>!o)}>
         <div className="tour-card-bar" style={{background:tour.color}}/>
         <div className="tour-card-info">
           <div className="tour-card-name">{tour.name}</div>
-          <div className="tour-card-count">{getTourPeriod(tour.lives)}</div>
-          <div className="tour-card-count" style={{marginTop:1}}>{tour.lives.length}公演 · {totalSongs}曲</div>
+          <div className="tour-card-period">{period}</div>
+          <div className="tour-card-count">{tour.lives.length}公演 · {totalSongs}曲</div>
         </div>
         <div className={"tour-card-arrow "+(open?"open":"")}>›</div>
         <div className="tour-del-wrap" onClick={e => { e.stopPropagation(); setDelTour(true); }}>
@@ -1341,15 +1348,12 @@ function generateTourVisualSync(tourName, color, userPrompt) {
   return pattern.render(color, tourName);
 }
 
-function TourVisPreviewDialog({ tourName, color, svgCode, onRetry, onConfirm }) {
+function TourVisPreviewDialog({ tourName, svgCode, onRetry, onConfirm }) {
   return (
     <div className="preview-overlay" onClick={e => e.stopPropagation()}>
       <div className="preview-dialog">
         <div className="preview-vis-wrap">
-          {svgCode
-            ? <div dangerouslySetInnerHTML={{__html:svgCode}} style={{width:"100%",height:"100%"}}/>
-            : <div className="preview-loading"><div style={{color:"rgba(255,255,255,.4)",fontSize:12}}>生成中…</div></div>
-          }
+          <div dangerouslySetInnerHTML={{__html:svgCode}} style={{width:"100%",height:"100%"}}/>
         </div>
         <div className="preview-body">
           <div className="preview-ttl">{tourName||"ツアー名未設定"}</div>
@@ -1405,7 +1409,7 @@ function AddTourForm({ onClose, onSaveTour }) {
     <>
       {preview && svgCode && (
         <TourVisPreviewDialog
-          tourName={tourName} color={color} svgCode={svgCode}
+          tourName={tourName} svgCode={svgCode}
           onRetry={handleRetry}
           onConfirm={handleConfirm}
         />
