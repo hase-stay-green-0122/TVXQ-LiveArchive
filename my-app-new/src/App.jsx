@@ -71,8 +71,8 @@ const ZONE_DOTS = (() => {
 const TOURS = [
   {
     id: "tour-20th",
-    name: "東方神起 20th Anniversary LIVE IN NISSAN STADIUM",
-    sub:  "〜RED OCEAN〜",
+    name: "RED OCEAN",
+    sub:  "東方神起 20th Anniversary LIVE IN NISSAN STADIUM",
     color: "#c0152a",
     featured: true,
     lives: [
@@ -193,8 +193,8 @@ const TOURS = [
   },
   {
     id: "tour-zone",
-    name: "東方神起 20th Anniversary LIVE TOUR ～ZONE～",
-    sub:  "ZONE",
+    name: "ZONE",
+    sub:  "東方神起 20th Anniversary LIVE TOUR",
     color: "#1a4a6b",
     lives: [
       {
@@ -399,8 +399,8 @@ const CSS = `
   .tour-card-hdr { display:flex; align-items:center; gap:12px; padding:12px 16px; cursor:pointer; }
   .tour-card-bar { width:3px; height:44px; border-radius:2px; flex-shrink:0; }
   .tour-card-info { flex:1; min-width:0; }
-  .tour-card-name { font-family:"Noto Serif JP",serif; font-size:13px; font-weight:300; color:#fff; line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; letter-spacing:.05em; }
-  .tour-card-period { font-size:13px; color:var(--gold-lt); margin-top:3px; letter-spacing:.04em; }
+  .tour-card-name { font-family:"Noto Serif JP",serif; font-size:11px; font-weight:400; color:rgba(255,255,255,.5); line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; letter-spacing:.05em; }
+  .tour-card-period { font-size:13px; color:#fff; margin-top:2px; letter-spacing:.04em; font-weight:300; }
   .tour-card-count { display:none; }
   .tour-card-arrow { font-size:18px; color:rgba(255,255,255,.3); transition:transform .2s; flex-shrink:0; }
   .tour-card-arrow.open { transform:rotate(90deg); }
@@ -784,7 +784,7 @@ function TourCard({ tour, onLiveSelect, onLiveDelete, onTourDelete }) {
     if (tour.id === "tour-20th") return (
       <div className="tour-vis-wrap" onClick={() => setOpen(o=>!o)}>
         <div className="red-vis" style={{height:"100%"}}>
-          <div className="red-wm"><span>{tour.sub || tour.name}</span></div>
+          <div className="red-wm"><span>{tour.name}</span></div>
           <div className="red-ocean-dots">
             {Array.from({length:60}).map((_,i) => (
               <div key={i} className="rod" style={{background:ROD[i%ROD.length],height:6+(i%5)*3,opacity:0.4+(i%4)*0.15,boxShadow:`0 0 3px ${ROD[i%ROD.length]}`}}/>
@@ -798,7 +798,7 @@ function TourCard({ tour, onLiveSelect, onLiveDelete, onTourDelete }) {
     if (tour.id === "tour-zone") return (
       <div className="tour-vis-wrap" onClick={() => setOpen(o=>!o)}>
         <div className="zone-vis" style={{height:"100%"}}>
-          <div className="zone-wm"><span>{tour.sub || tour.name}</span></div>
+          <div className="zone-wm"><span>{tour.name}</span></div>
           <svg className="zone-dots-svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
             <circle cx="50" cy="50" r="4" fill="rgba(180,220,255,0.9)"/>
             <circle cx="50" cy="50" r="8" fill="rgba(120,180,255,0.2)"/>
@@ -816,7 +816,7 @@ function TourCard({ tour, onLiveSelect, onLiveDelete, onTourDelete }) {
       <div className="tour-vis-wrap" onClick={() => setOpen(o=>!o)}>
         <img src={svgUrl} style={{width:"100%",height:"110px",display:"block",objectFit:"cover"}} alt=""/>
         <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none",zIndex:3}}>
-          <span style={{fontFamily:'"Noto Serif JP",serif',fontSize:"44px",fontWeight:300,letterSpacing:".2em",color:"rgba(255,255,255,.75)",whiteSpace:"nowrap",textShadow:"0 1px 8px rgba(0,0,0,.6)"}}>{tour.sub || tour.name}</span>
+          <span style={{fontFamily:'"Noto Serif JP",serif',fontSize:"44px",fontWeight:300,letterSpacing:".2em",color:"rgba(255,255,255,.75)",whiteSpace:"nowrap",textShadow:"0 1px 8px rgba(0,0,0,.6)"}}>{tour.name}</span>
         </div>
       </div>
     );
@@ -846,7 +846,7 @@ function TourCard({ tour, onLiveSelect, onLiveDelete, onTourDelete }) {
       <div className="tour-card-hdr" onClick={() => setOpen(o=>!o)}>
         <div className="tour-card-bar" style={{background:tour.color}}/>
         <div className="tour-card-info">
-          <div className="tour-card-name">{tour.name}</div>
+          <div className="tour-card-name">{tour.sub || ""}</div>
           <div className="tour-card-period">{period}</div>
           <div className="tour-card-count">{tour.lives.length}公演 · {totalSongs}曲</div>
         </div>
@@ -983,7 +983,7 @@ function LiveModal({ live:liveProp, tour, onClose, onUpdate }) {
             <div className="mvenue">📍 {live.venue}</div>
             {live.open && <div className="mtime-row"><div className="mtime">開場 <b>{live.open}</b></div><div className="mtime">開演 <b>{live.start}</b></div></div>}
           </div>
-          <div className="mhero-wm">{tour.sub || tour.name}</div>
+          <div className="mhero-wm">{tour.name}</div>
         </div>
         {/* ①セットリスト */}
         <div className="msec">
@@ -1442,12 +1442,12 @@ function AddTourForm({ onClose, onSaveTour }) {
           <div className="mhero dark"><div className="mdate">NEW TOUR</div><div className="mtitle">ツアーを追加する</div></div>
 
           <div className="fsec">
-            <label className="flbl">ツアー名</label>
-            <input className="finp" placeholder="例: 東方神起 LIVE TOUR 2027" value={tourName} onChange={e=>setTourName(e.target.value)}/>
+            <label className="flbl">ツアータイトル（ビジュアルに大きく表示）</label>
+            <input className="finp" placeholder="例: CIRCLE" value={tourName} onChange={e=>setTourName(e.target.value)}/>
           </div>
           <div className="fsec">
-            <label className="flbl">サブタイトル（任意）</label>
-            <input className="finp" placeholder="例: 〜ANOTHER WORLD〜" value={tourSub} onChange={e=>setTourSub(e.target.value)}/>
+            <label className="flbl">サブタイトル（任意・下部に小さく表示）</label>
+            <input className="finp" placeholder="例: 東方神起 LIVE TOUR 2027" value={tourSub} onChange={e=>setTourSub(e.target.value)}/>
           </div>
 
           <div className="fdivider">テーマカラー</div>
