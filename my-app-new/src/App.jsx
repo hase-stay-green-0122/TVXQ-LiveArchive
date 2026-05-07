@@ -399,9 +399,9 @@ const CSS = `
   .tour-card-hdr { display:flex; align-items:center; gap:12px; padding:12px 16px; cursor:pointer; }
   .tour-card-bar { width:3px; height:44px; border-radius:2px; flex-shrink:0; }
   .tour-card-info { flex:1; min-width:0; }
-  .tour-card-name { font-family:"Noto Serif JP",serif; font-size:22px; font-weight:300; color:#fff; line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; letter-spacing:.05em; }
-  .tour-card-period { font-size:11px; color:var(--gold-lt); margin-top:3px; letter-spacing:.04em; }
-  .tour-card-count { font-size:11px; color:rgba(255,255,255,.4); margin-top:2px; }
+  .tour-card-name { font-family:"Noto Serif JP",serif; font-size:13px; font-weight:300; color:#fff; line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; letter-spacing:.05em; }
+  .tour-card-period { font-size:13px; color:var(--gold-lt); margin-top:3px; letter-spacing:.04em; }
+  .tour-card-count { display:none; }
   .tour-card-arrow { font-size:18px; color:rgba(255,255,255,.3); transition:transform .2s; flex-shrink:0; }
   .tour-card-arrow.open { transform:rotate(90deg); }
 
@@ -409,7 +409,7 @@ const CSS = `
   .red-vis { height:110px; background:linear-gradient(180deg,#0a0204,#1a0208 50%,#2a0510); position:relative; overflow:hidden; }
   .red-vis::before { content:""; position:absolute; inset:0; background:radial-gradient(ellipse 300px 30px at 50% 85%,rgba(232,17,45,.35),transparent 70%),radial-gradient(ellipse 200px 20px at 30% 70%,rgba(192,21,42,.2),transparent 70%),radial-gradient(ellipse 200px 20px at 70% 60%,rgba(192,21,42,.2),transparent 70%); }
   .red-wm { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; z-index:1; }
-  .red-wm span { font-family:"Noto Serif JP",serif; font-size:48px; font-weight:300; letter-spacing:.2em; color:rgba(255,255,255,.75); white-space:nowrap; }
+  .red-wm span { font-family:"Noto Serif JP",serif; font-size:44px; font-weight:300; letter-spacing:.2em; color:rgba(255,255,255,.75); white-space:nowrap; }
   .red-waves { position:absolute; bottom:0; left:0; right:0; }
   .red-wave { position:absolute; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,rgba(232,17,45,.3) 25%,rgba(255,80,100,.5) 50%,rgba(232,17,45,.3) 75%,transparent); }
   .red-wave:nth-child(1){bottom:8px} .red-wave:nth-child(2){bottom:16px;opacity:.6} .red-wave:nth-child(3){bottom:24px;opacity:.3}
@@ -422,7 +422,7 @@ const CSS = `
   .zone-vis::before { content:""; position:absolute; inset:0; background:radial-gradient(ellipse 160px 90px at 15% 20%,rgba(80,160,255,.14),transparent 65%),radial-gradient(ellipse 120px 70px at 85% 75%,rgba(60,130,220,.12),transparent 65%),radial-gradient(ellipse 200px 40px at 50% 100%,rgba(40,100,180,.18),transparent 70%); }
   .zone-vis::after { content:""; position:absolute; bottom:28px; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(100,170,255,.25) 30%,rgba(140,200,255,.45) 50%,rgba(100,170,255,.25) 70%,transparent); }
   .zone-wm { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; }
-  .zone-wm span { font-family:"Noto Serif JP",serif; font-size:52px; font-weight:300; letter-spacing:.32em; color:rgba(255,255,255,.75); white-space:nowrap; }
+  .zone-wm span { font-family:"Noto Serif JP",serif; font-size:44px; font-weight:300; letter-spacing:.32em; color:rgba(255,255,255,.75); white-space:nowrap; }
   .zone-dots-svg { position:absolute; inset:0; width:100%; height:100%; }
   .zone-badge { position:absolute; top:12px; right:12px; background:rgba(80,150,255,.2); border:1px solid rgba(100,170,255,.35); color:rgba(160,210,255,.9); font-size:8px; font-weight:700; letter-spacing:.15em; padding:3px 9px; border-radius:3px; }
 
@@ -461,9 +461,8 @@ const CSS = `
   .nav-right { display:flex; gap:8px; align-items:center; }
   .mhero { padding:24px 24px 20px; margin-bottom:20px; position:relative; overflow:hidden; }
   .mhero.red { background:linear-gradient(140deg,var(--red-deep),var(--red)); }
-  .mhero.red::after { content:"RED OCEAN"; position:absolute; bottom:-14px; right:-4px; font-family:"Noto Serif JP",serif; font-size:50px; font-weight:300; color:rgba(255,255,255,.05); white-space:nowrap; pointer-events:none; }
   .mhero.dark { background:linear-gradient(140deg,var(--red-deep),var(--ink)); }
-  .mhero.dark::after { content:"東方神起"; position:absolute; bottom:-16px; right:-8px; font-family:"Noto Serif JP",serif; font-size:62px; font-weight:300; color:rgba(255,255,255,.04); white-space:nowrap; pointer-events:none; }
+  .mhero-wm { position:absolute; bottom:-16px; right:-8px; font-family:"Noto Serif JP",serif; font-size:56px; font-weight:300; color:rgba(255,255,255,.05); white-space:nowrap; pointer-events:none; }
   .mdate { font-family:"Noto Serif JP",serif; font-style:italic; font-size:12px; color:rgba(255,255,255,.6); letter-spacing:.18em; margin-bottom:6px; }
   .mtitle { font-family:"Noto Serif JP",serif; font-size:17px; font-weight:600; color:#fff; line-height:1.5; }
   .msub { font-family:"Noto Serif JP",serif; font-style:italic; font-size:13px; color:var(--gold-lt); letter-spacing:.1em; margin-top:4px; }
@@ -785,7 +784,7 @@ function TourCard({ tour, onLiveSelect, onLiveDelete, onTourDelete }) {
     if (tour.id === "tour-20th") return (
       <div className="tour-vis-wrap" onClick={() => setOpen(o=>!o)}>
         <div className="red-vis" style={{height:"100%"}}>
-          <div className="red-wm">{tour.sub && <span>{tour.sub}</span>}</div>
+          <div className="red-wm"><span>{tour.sub || tour.name}</span></div>
           <div className="red-ocean-dots">
             {Array.from({length:60}).map((_,i) => (
               <div key={i} className="rod" style={{background:ROD[i%ROD.length],height:6+(i%5)*3,opacity:0.4+(i%4)*0.15,boxShadow:`0 0 3px ${ROD[i%ROD.length]}`}}/>
@@ -799,7 +798,7 @@ function TourCard({ tour, onLiveSelect, onLiveDelete, onTourDelete }) {
     if (tour.id === "tour-zone") return (
       <div className="tour-vis-wrap" onClick={() => setOpen(o=>!o)}>
         <div className="zone-vis" style={{height:"100%"}}>
-          <div className="zone-wm">{tour.sub && <span>{tour.sub}</span>}</div>
+          <div className="zone-wm"><span>{tour.sub || tour.name}</span></div>
           <svg className="zone-dots-svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
             <circle cx="50" cy="50" r="4" fill="rgba(180,220,255,0.9)"/>
             <circle cx="50" cy="50" r="8" fill="rgba(120,180,255,0.2)"/>
@@ -816,8 +815,8 @@ function TourCard({ tour, onLiveSelect, onLiveDelete, onTourDelete }) {
     const renderUserVis = (svgUrl) => (
       <div className="tour-vis-wrap" onClick={() => setOpen(o=>!o)}>
         <img src={svgUrl} style={{width:"100%",height:"110px",display:"block",objectFit:"cover"}} alt=""/>
-        <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",pointerEvents:"none",zIndex:3}}>
-          {tour.sub && <span style={{fontFamily:'"Noto Serif JP",serif',fontSize:"13px",fontWeight:300,letterSpacing:".15em",color:"rgba(255,255,255,.6)",textShadow:"0 1px 8px rgba(0,0,0,.6)"}}>{tour.sub}</span>}
+        <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none",zIndex:3}}>
+          <span style={{fontFamily:'"Noto Serif JP",serif',fontSize:"44px",fontWeight:300,letterSpacing:".2em",color:"rgba(255,255,255,.75)",whiteSpace:"nowrap",textShadow:"0 1px 8px rgba(0,0,0,.6)"}}>{tour.sub || tour.name}</span>
         </div>
       </div>
     );
@@ -984,6 +983,7 @@ function LiveModal({ live:liveProp, tour, onClose, onUpdate }) {
             <div className="mvenue">📍 {live.venue}</div>
             {live.open && <div className="mtime-row"><div className="mtime">開場 <b>{live.open}</b></div><div className="mtime">開演 <b>{live.start}</b></div></div>}
           </div>
+          <div className="mhero-wm">{tour.sub || tour.name}</div>
         </div>
         {/* ①セットリスト */}
         <div className="msec">
