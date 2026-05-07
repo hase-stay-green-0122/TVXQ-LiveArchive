@@ -812,19 +812,19 @@ function TourCard({ tour, onLiveSelect, onLiveDelete, onTourDelete }) {
       </div>
     );
     const toImgUrl = (svg) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(stripSvgText(svg))}`;
-    if (tour.svgCode) return (
+    const renderUserVis = (svgUrl) => (
       <div className="tour-vis-wrap" onClick={() => setOpen(o=>!o)}>
-        <img src={toImgUrl(tour.svgCode)} style={{width:"100%",height:"110px",display:"block",objectFit:"cover"}} alt=""/>
+        <img src={svgUrl} style={{width:"100%",height:"110px",display:"block",objectFit:"cover"}} alt=""/>
+        <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",pointerEvents:"none",zIndex:3}}>
+          <span style={{fontFamily:'"Noto Serif JP",serif',fontSize:"48px",fontWeight:300,letterSpacing:".2em",color:"rgba(255,255,255,.75)",whiteSpace:"nowrap",lineHeight:1.1,textShadow:"0 2px 16px rgba(0,0,0,.5)"}}>{tour.name}</span>
+          {tour.sub && <span style={{fontFamily:'"Noto Serif JP",serif',fontSize:"13px",fontWeight:300,letterSpacing:".15em",color:"rgba(255,255,255,.6)",marginTop:"6px",textShadow:"0 1px 8px rgba(0,0,0,.6)"}}>{tour.sub}</span>}
+        </div>
       </div>
     );
-    // フォールバック：svgCodeなしの場合もbaseSvgで統一デザイン
+    if (tour.svgCode) return renderUserVis(toImgUrl(tour.svgCode));
     const c1 = darken(tour.color, 0.55), c2 = darken(tour.color, 0.2);
     const fallbackSvg = baseSvg(c1, c2, '');
-    return (
-      <div className="tour-vis-wrap" onClick={() => setOpen(o=>!o)}>
-        <img src={toImgUrl(fallbackSvg)} style={{width:"100%",height:"110px",display:"block",objectFit:"cover"}} alt=""/>
-      </div>
-    );
+    return renderUserVis(toImgUrl(fallbackSvg));
   };
 
   return (
