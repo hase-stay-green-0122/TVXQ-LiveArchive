@@ -811,17 +811,19 @@ function TourCard({ tour, onLiveSelect, onLiveDelete, onTourDelete }) {
         </div>
       </div>
     );
+    const toImgUrl = (svg) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(stripSvgText(svg))}`;
     if (tour.svgCode) return (
-      <div className="tour-vis-wrap" onClick={() => setOpen(o=>!o)}
-        dangerouslySetInnerHTML={{__html:tour.svgCode}}/>
+      <div className="tour-vis-wrap" onClick={() => setOpen(o=>!o)}>
+        <img src={toImgUrl(tour.svgCode)} style={{width:"100%",height:"110px",display:"block",objectFit:"cover"}} alt=""/>
+      </div>
     );
-    // フォールバック：svgCodeなしの場合もglowTextで統一デザイン
+    // フォールバック：svgCodeなしの場合もbaseSvgで統一デザイン
     const c1 = darken(tour.color, 0.55), c2 = darken(tour.color, 0.2);
-    const cl = lighten(tour.color, 0.6);
-    const fallbackSvg = baseSvg(c1, c2, glowText(tour.name, cl));
+    const fallbackSvg = baseSvg(c1, c2, '');
     return (
-      <div className="tour-vis-wrap" onClick={() => setOpen(o=>!o)}
-        dangerouslySetInnerHTML={{__html:fallbackSvg}}/>
+      <div className="tour-vis-wrap" onClick={() => setOpen(o=>!o)}>
+        <img src={toImgUrl(fallbackSvg)} style={{width:"100%",height:"110px",display:"block",objectFit:"cover"}} alt=""/>
+      </div>
     );
   };
 
@@ -1142,7 +1144,7 @@ const VIS_PATTERNS = [
         const x=(i*37+10)%400, y=45+(i*23)%35;
         return `<circle cx="${x}" cy="${y}" r="${1+i%3}" fill="#fff" opacity="${0.08+i%4*0.04}"/>`;
       }).join('');
-      return baseSvg(c1,c2,glow+waves+foam+glowText(name,cl));
+      return baseSvg(c1,c2,glow+waves+foam);
     }
   },
   {
@@ -1159,7 +1161,7 @@ const VIS_PATTERNS = [
       }).join('');
       const moon = `<circle cx="340" cy="28" r="22" fill="${cl}" opacity="0.12"/><circle cx="340" cy="28" r="14" fill="${cl}" opacity="0.15"/><circle cx="340" cy="28" r="7" fill="#fff" opacity="0.4"/>`;
       const glow = `<ellipse cx="340" cy="28" rx="60" ry="40" fill="${cl}" opacity="0.06"/>`;
-      return baseSvg(c1,c2,stars+glow+moon+glowText(name,cl));
+      return baseSvg(c1,c2,stars+glow+moon);
     }
   },
   {
@@ -1179,7 +1181,7 @@ const VIS_PATTERNS = [
       }).join('');
       const core = `<circle cx="200" cy="55" r="12" fill="${cl}" opacity="0.15"/><circle cx="200" cy="55" r="5" fill="${cl}" opacity="0.35"/><circle cx="200" cy="55" r="2" fill="#fff" opacity="0.7"/>`;
       const glow = `<ellipse cx="200" cy="55" rx="80" ry="45" fill="${cl}" opacity="0.05"/>`;
-      return baseSvg(c1,c2,glow+spirals+core+glowText(name,cl));
+      return baseSvg(c1,c2,glow+spirals+core);
     }
   },
   {
@@ -1198,7 +1200,7 @@ const VIS_PATTERNS = [
         const x=40+i*65, r=3+i%3*2;
         return `<ellipse cx="${x}" cy="100" rx="${r}" ry="1.5" fill="${cl}" opacity="0.12"/>`;
       }).join('');
-      return baseSvg(c1,c2,drops+puddle+splash+glowText(name,cl));
+      return baseSvg(c1,c2,drops+puddle+splash);
     }
   },
   {
@@ -1217,7 +1219,7 @@ const VIS_PATTERNS = [
         return `<circle cx="${x}" cy="${y}" r="${0.8+i%3*0.6}" fill="${cl2}" opacity="${(0.15+i%5*0.07).toFixed(2)}"/>`;
       }).join('');
       const glow = `<ellipse cx="200" cy="112" rx="200" ry="30" fill="${cl}" opacity="0.1"/>`;
-      return baseSvg(c1,c2,glow+flames+embers+glowText(name,cl2));
+      return baseSvg(c1,c2,glow+flames+embers);
     }
   },
   {
@@ -1236,7 +1238,7 @@ const VIS_PATTERNS = [
         return `<rect x="${x-2}" y="${y-2}" width="4" height="4" fill="${cl}" opacity="${op}" transform="rotate(45 ${x} ${y})"/>`;
       }).join('');
       const glow = `<ellipse cx="200" cy="55" rx="120" ry="40" fill="${cl}" opacity="0.05"/>`;
-      return baseSvg(c1,c2,glow+hlines+vlines+nodes+glowText(name,cl));
+      return baseSvg(c1,c2,glow+hlines+vlines+nodes);
     }
   },
   {
@@ -1257,7 +1259,7 @@ const VIS_PATTERNS = [
         `<circle cx="200" cy="55" r="${r}" fill="none" stroke="${cl}" stroke-width="0.8" opacity="${0.12-i*0.03}"/>`).join('');
       const core = `<circle cx="200" cy="55" r="14" fill="${cl}" opacity="0.18"/><circle cx="200" cy="55" r="7" fill="${cl}" opacity="0.3"/><circle cx="200" cy="55" r="3" fill="#fff" opacity="0.75"/>`;
       const glow = `<ellipse cx="200" cy="55" rx="100" ry="60" fill="${cl}" opacity="0.06"/>`;
-      return baseSvg(c1,c2,glow+rays+rings+core+glowText(name,cl));
+      return baseSvg(c1,c2,glow+rays+rings+core);
     }
   },
   {
@@ -1273,7 +1275,7 @@ const VIS_PATTERNS = [
       }).join('');
       const glow1=`<ellipse cx="130" cy="40" rx="60" ry="35" fill="${cl}" opacity="0.05"/>`;
       const glow2=`<ellipse cx="280" cy="75" rx="50" ry="30" fill="${cl}" opacity="0.05"/>`;
-      return baseSvg(c1,c2,glow1+glow2+bubbles+glowText(name,cl));
+      return baseSvg(c1,c2,glow1+glow2+bubbles);
     }
   },
   {
@@ -1290,7 +1292,7 @@ const VIS_PATTERNS = [
       }).join('');
       const branch = `<path d="M0 90 Q80 70 160 50 Q240 35 320 45 Q370 50 400 40" fill="none" stroke="${cl}" stroke-width="1.5" opacity="0.15"/>`;
       const glow = `<ellipse cx="200" cy="55" rx="180" ry="50" fill="${cl}" opacity="0.04"/>`;
-      return baseSvg(c1,c2,glow+branch+petals+glowText(name,cl));
+      return baseSvg(c1,c2,glow+branch+petals);
     }
   },
   {
@@ -1309,7 +1311,7 @@ const VIS_PATTERNS = [
         return `<line x1="${x}" y1="0" x2="${x+20}" y2="110" stroke="#fff" stroke-width="0.6" opacity="${0.06+i%3*0.02}"/>`;
       }).join('');
       const glow = `<ellipse cx="200" cy="20" rx="150" ry="30" fill="${cl}" opacity="0.08"/>`;
-      return baseSvg(c1,c2,source+beams+rays+glow+glowText(name,cl));
+      return baseSvg(c1,c2,source+beams+rays+glow);
     }
   },
 ];
@@ -1336,6 +1338,9 @@ function glowText(name, cl) {
   const fontSize = display.length > 20 ? 15 : display.length > 12 ? 19 : 24;
   return `<text x="200" y="63" text-anchor="middle" dominant-baseline="middle" font-family="Noto Serif JP,serif" font-size="${fontSize}" fill="${cl}" opacity="0.12" letter-spacing="4">${display}</text><text x="200" y="63" text-anchor="middle" dominant-baseline="middle" font-family="Noto Serif JP,serif" font-size="${fontSize}" fill="#fff" opacity="0.9" letter-spacing="4" font-weight="300">${display}</text>`;
 }
+
+// 既存svgCodeに含まれるテキスト要素を除去（旧データ互換）
+const stripSvgText = (svg) => svg ? svg.replace(/<text[\s\S]*?<\/text>/gi, '') : svg;
 
 // キーワード解析して即時SVG生成（API不要）
 function generateTourVisualSync(tourName, color, userPrompt) {
