@@ -194,6 +194,7 @@ const TOURS = [
   {
     id: "tour-zone",
     name: "東方神起 20th Anniversary LIVE TOUR ～ZONE～",
+    sub:  "ZONE",
     color: "#1a4a6b",
     lives: [
       {
@@ -354,7 +355,7 @@ const CSS = `
     .content { grid-column:2; grid-row:1 / 3; padding:32px 40px 60px; max-width:760px; overflow-y:auto; }
     .sec-lbl { font-size:11px; margin-bottom:16px; }
     .tour-card { border-radius:18px; margin-bottom:16px; }
-    .tour-card-name { font-size:13px; }
+    .tour-card-name { font-size:22px; }
     .live-item { padding:14px 20px; }
     .live-item-venue { font-size:14px; }
     .overlay { position:fixed; }
@@ -398,7 +399,7 @@ const CSS = `
   .tour-card-hdr { display:flex; align-items:center; gap:12px; padding:12px 16px; cursor:pointer; }
   .tour-card-bar { width:3px; height:44px; border-radius:2px; flex-shrink:0; }
   .tour-card-info { flex:1; min-width:0; }
-  .tour-card-name { font-family:"Noto Serif JP",serif; font-size:13px; font-weight:600; color:#fff; line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tour-card-name { font-family:"Noto Serif JP",serif; font-size:22px; font-weight:300; color:#fff; line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; letter-spacing:.05em; }
   .tour-card-period { font-size:11px; color:var(--gold-lt); margin-top:3px; letter-spacing:.04em; }
   .tour-card-count { font-size:11px; color:rgba(255,255,255,.4); margin-top:2px; }
   .tour-card-arrow { font-size:18px; color:rgba(255,255,255,.3); transition:transform .2s; flex-shrink:0; }
@@ -784,7 +785,7 @@ function TourCard({ tour, onLiveSelect, onLiveDelete, onTourDelete }) {
     if (tour.id === "tour-20th") return (
       <div className="tour-vis-wrap" onClick={() => setOpen(o=>!o)}>
         <div className="red-vis" style={{height:"100%"}}>
-          <div className="red-wm"><span>RED OCEAN</span></div>
+          <div className="red-wm">{tour.sub && <span>{tour.sub}</span>}</div>
           <div className="red-ocean-dots">
             {Array.from({length:60}).map((_,i) => (
               <div key={i} className="rod" style={{background:ROD[i%ROD.length],height:6+(i%5)*3,opacity:0.4+(i%4)*0.15,boxShadow:`0 0 3px ${ROD[i%ROD.length]}`}}/>
@@ -798,7 +799,7 @@ function TourCard({ tour, onLiveSelect, onLiveDelete, onTourDelete }) {
     if (tour.id === "tour-zone") return (
       <div className="tour-vis-wrap" onClick={() => setOpen(o=>!o)}>
         <div className="zone-vis" style={{height:"100%"}}>
-          <div className="zone-wm"><span>ZONE</span></div>
+          <div className="zone-wm">{tour.sub && <span>{tour.sub}</span>}</div>
           <svg className="zone-dots-svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
             <circle cx="50" cy="50" r="4" fill="rgba(180,220,255,0.9)"/>
             <circle cx="50" cy="50" r="8" fill="rgba(120,180,255,0.2)"/>
