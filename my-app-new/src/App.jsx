@@ -375,12 +375,9 @@ const CSS = `
   .hdr-vis::before { content:""; position:absolute; inset:0; background:radial-gradient(ellipse 180px 60px at 50% 100%,rgba(192,21,42,.4),transparent 70%),radial-gradient(ellipse 80px 120px at 35% 100%,rgba(220,30,50,.2),transparent 65%),radial-gradient(ellipse 80px 120px at 65% 100%,rgba(220,30,50,.2),transparent 65%); }
   .hdr-aktf { position:absolute; top:16px; left:0; right:0; display:flex; justify-content:center; pointer-events:none; z-index:10; }
   .hdr-aktf span { font-family:"Noto Serif JP",serif; font-size:16px; font-style:italic; font-weight:400; letter-spacing:.38em; color:#fff; white-space:nowrap; text-shadow:0 0 24px rgba(232,17,45,.9),0 0 8px rgba(232,17,45,.6),0 1px 4px rgba(0,0,0,.9); }
-  .hdr-tdots { position:absolute; bottom:28px; left:50%; transform:translateX(-50%); display:grid; grid-template-columns:repeat(9,7px); grid-template-rows:repeat(7,7px); gap:2px; z-index:2; }
+  .hdr-tdots { position:absolute; bottom:13px; left:50%; transform:translateX(-50%); display:grid; grid-template-columns:repeat(9,7px); grid-template-rows:repeat(7,7px); gap:2px; z-index:2; }
   .hdr-dot { width:4px; height:6px; border-radius:50% 50% 30% 30%; align-self:end; }
   .hdr-silhouette { position:absolute; bottom:0; left:50%; transform:translateX(calc(-50% + 80px)); z-index:6; opacity:.92; mix-blend-mode:screen; }
-  .hdr-sil { position:absolute; bottom:0; left:0; right:0; height:60px; z-index:1; }
-  .hdr-pitch { position:absolute; bottom:0; left:8%; right:8%; height:20px; background:linear-gradient(180deg,#0d2e0d,#0a200a); border-radius:50% 50% 0 0/40% 40% 0 0; }
-  .hdr-pitch::before { content:"STAGE"; position:absolute; top:5px; left:50%; transform:translateX(-50%); font-size:7px; letter-spacing:.3em; color:rgba(255,255,255,.18); font-family:"Noto Serif JP",serif; }
   .hdr-body { padding:14px 24px 16px; }
   .hdr-sub { font-family:"Noto Serif JP",serif; font-weight:300; font-size:16px; letter-spacing:.1em; color:#fff; }
   .hdr-row { display:flex; align-items:center; justify-content:space-between; margin-top:14px; }
@@ -395,8 +392,9 @@ const CSS = `
 
   /* Tour card */
   .tour-card { background:var(--ink); border-radius:14px; margin-bottom:12px; overflow:hidden; box-shadow:0 2px 10px var(--shadow); border:1px solid rgba(192,21,42,.2); }
-  .tour-vis-wrap { height:110px; overflow:hidden; cursor:pointer; position:relative; flex-shrink:0; }
-  .tour-vis-wrap svg { width:100%; height:100%; display:block; }
+  .tour-vis-wrap { height:110px; overflow:hidden; cursor:pointer; position:relative; flex-shrink:0; display:block; width:100%; }
+  .tour-vis-wrap > svg, .tour-vis-wrap svg { width:100% !important; height:110px !important; display:block; }
+  .tour-vis-wrap > div { width:100%; height:110px; }
   .tour-card-hdr { display:flex; align-items:center; gap:12px; padding:12px 16px; cursor:pointer; }
   .tour-card-bar { width:3px; height:44px; border-radius:2px; flex-shrink:0; }
   .tour-card-info { flex:1; min-width:0; }
@@ -1331,7 +1329,7 @@ function lighten(hex, amt) {
 }
 function baseSvg(c1, c2, content) {
   const grad = `<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${c1}"/><stop offset="100%" stop-color="${c2}"/></linearGradient><radialGradient id="vglow" cx="50%" cy="50%" r="60%"><stop offset="0%" stop-color="${c2}" stop-opacity="0.3"/><stop offset="100%" stop-color="${c1}" stop-opacity="0"/></radialGradient></defs><rect width="400" height="110" fill="url(#bg)"/><rect width="400" height="110" fill="url(#vglow)"/>`;
-  return `<svg viewBox="0 0 400 110" xmlns="http://www.w3.org/2000/svg">${grad}${content}</svg>`;
+  return `<svg viewBox="0 0 400 110" width="100%" height="110" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">${grad}${content}</svg>`;
 }
 function glowText(name, cl) {
   const display = name || "NEW TOUR";
@@ -1787,7 +1785,6 @@ export default function App() {
               ))}
             </div>
             <Silhouette/>
-            <div className="hdr-sil"><div className="hdr-pitch"/></div>
           </div>
           <div className="hdr-body">
             <div className="hdr-sub">東方神起 - TVXQ! LIVE ARCHIVE</div>
