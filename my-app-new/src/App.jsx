@@ -1,4 +1,35 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+
+// ─────────────────────────────────────────────
+//  Firebase 初期化
+// ─────────────────────────────────────────────
+
+const firebaseConfig = {
+  apiKey: "AIzaSyB9AckvcNLR4TWFXMqtI0uaSIZEF1wXhoU",
+  authDomain: "tvxq-live-archive.firebaseapp.com",
+  projectId: "tvxq-live-archive",
+  storageBucket: "tvxq-live-archive.firebasestorage.app",
+  messagingSenderId: "687624555209",
+  appId: "1:687624555209:web:0575b35d00ea4984139b18",
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getFirestore(firebaseApp);
+const storage = getStorage(firebaseApp);
+const DOC_REF = doc(db, "archive", "allLives");
+
+const loadFromFirestore = async () => {
+  const snap = await getDoc(DOC_REF);
+  if (snap.exists()) return snap.data().lives;
+  return null;
+};
+
+const saveToFirestore = async (lives) => {
+  await setDoc(DOC_REF, { lives });
+};
 
 // ─────────────────────────────────────────────
 //  定数・データ
@@ -14,13 +45,13 @@ const MEM_FIELDS = [
   { key: "other",     icon: "❤️", label: "その他"         },
 ];
 
-// T字ドット事前計算（7列×7行）
+// T字ドット事前計算（9列×7行）
 const T_DOTS = (() => {
   const C = ["#e8112d","#c0152a","#ff3355","#d42035"];
   const d = [];
   for (let r = 0; r < 7; r++)
-    for (let c = 0; c < 7; c++)
-      d.push({ key:r*7+c, lit:r<=1||(c>=2&&c<=4), color:C[(r*7+c)%4] });
+    for (let c = 0; c < 9; c++)
+      d.push({ key:r*9+c, lit:r<=1||(c>=3&&c<=5), color:C[(r*9+c)%4] });
   return d;
 })();
 
@@ -42,10 +73,8 @@ const TOURS = [
     id: "tour-20th",
     name: "東方神起 20th Anniversary LIVE IN NISSAN STADIUM",
     sub:  "〜RED OCEAN〜",
-    year: "2026",
     color: "#c0152a",
     featured: true,
-    vis: "red",
     lives: [
       {
         id: "nissan-0425",
@@ -165,9 +194,8 @@ const TOURS = [
   {
     id: "tour-zone",
     name: "東方神起 20th Anniversary LIVE TOUR ～ZONE～",
-    year: "2024–2025",
+    sub:  "ZONE",
     color: "#1a4a6b",
-    vis: "zone",
     lives: [
       {
         id: "zone-saitama",
@@ -279,40 +307,83 @@ const TOURS = [
 ];
 
 // ─────────────────────────────────────────────
-//  ローカルストレージ
+//  初期データ構築
 // ─────────────────────────────────────────────
 
-const LS_KEY = "tvxq_user_lives";
-const loadUserLives = () => { try { return JSON.parse(localStorage.getItem(LS_KEY)||"[]"); } catch { return []; } };
-const saveUserLives = (d) => { try { localStorage.setItem(LS_KEY,JSON.stringify(d)); } catch {} };
+const buildInitialAllLives = () =>
+  TOURS.flatMap(t => t.lives.map(l => ({
+    tourId:    t.id,
+    tourName:  t.name,
+    tourSub:   t.sub || null,
+    tourColor: t.color,
+    featured:  !!t.featured,
+    live:      l,
+  })));
 
 // ─────────────────────────────────────────────
 //  スタイル
 // ─────────────────────────────────────────────
 
 const CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;600&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Noto+Sans+JP:wght@300;400&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;600;700&display=swap');
   :root { --red:#c0152a; --red-deep:#8b0d1c; --ink:#1c0a0c; --paper:#fdf6f6; --offwhite:#fff8f8; --gold:#d4a843; --gold-lt:#edd98a; --mist:#f5e8e8; --shadow:rgba(140,10,30,0.13); }
   * { box-sizing:border-box; margin:0; padding:0; }
-  .app { font-family:"Noto Sans JP",sans-serif; background:var(--paper); min-height:100vh; max-width:430px; margin:0 auto; color:var(--ink); }
+
+  /* ベースレイアウト */
+  body { background:var(--paper); }
+  .app { font-family:"Noto Serif JP",serif; background:var(--paper); min-height:100vh; color:var(--ink); width:100%; max-width:430px; margin:0 auto; }
+
+  /* タブレット（601px〜1024px）：中央寄せ・最大600px */
+  @media (min-width:601px) and (max-width:1024px) {
+    .app { max-width:600px; }
+    .hdr-vis { height:160px; }
+    .content { padding:24px 28px 60px; }
+    .tour-card { border-radius:16px; margin-bottom:14px; }
+    .modal { max-height:88vh; }
+  }
+
+  /* PC（1025px〜）：2カラム */
+  @media (min-width:1025px) {
+    body { background:#1a0608; }
+    .app { max-width:100%; display:grid; grid-template-columns:380px 1fr; grid-template-rows:auto 1fr; min-height:100vh; }
+    .hdr { grid-column:1; grid-row:1 / 3; position:sticky; top:0; height:100vh; overflow-y:auto; display:flex; flex-direction:column; }
+    .hdr-vis { height:220px; flex-shrink:0; }
+    .hdr-body { flex:1; padding:20px 32px 32px; }
+    .hdr-sub { font-size:18px; }
+    .stat-n { font-size:28px; }
+    .stats { gap:28px; }
+    .content { grid-column:2; grid-row:1 / 3; padding:32px 40px 60px; max-width:760px; overflow-y:auto; }
+    .sec-lbl { font-size:11px; margin-bottom:16px; }
+    .tour-card { border-radius:18px; margin-bottom:16px; }
+    .tour-card-name { font-size:22px; }
+    .live-item { padding:14px 20px; }
+    .live-item-venue { font-size:14px; }
+    .overlay { position:fixed; }
+    .modal { max-width:560px; margin:0 auto; border-radius:20px 20px 0 0; }
+    .add-btn { width:52px; height:52px; font-size:26px; }
+    .del-dialog { max-width:400px; }
+  }
+
+  /* PCサイドバー内のスクロール対応 */
+  @media (min-width:1025px) {
+    .hdr-row { margin-top:24px; }
+    .hdr-body { display:flex; flex-direction:column; gap:0; }
+  }
 
   /* Header */
   .hdr { background:linear-gradient(160deg,var(--red-deep),var(--red) 60%,#d42035); position:relative; overflow:hidden; }
   .hdr-vis { position:relative; height:130px; overflow:hidden; background:linear-gradient(180deg,#0d0204 0%,#1a0306 40%,#2d0508 100%); }
   .hdr-vis::before { content:""; position:absolute; inset:0; background:radial-gradient(ellipse 180px 60px at 50% 100%,rgba(192,21,42,.4),transparent 70%),radial-gradient(ellipse 80px 120px at 35% 100%,rgba(220,30,50,.2),transparent 65%),radial-gradient(ellipse 80px 120px at 65% 100%,rgba(220,30,50,.2),transparent 65%); }
   .hdr-aktf { position:absolute; top:16px; left:0; right:0; display:flex; justify-content:center; pointer-events:none; z-index:10; }
-  .hdr-aktf span { font-family:"Cormorant Garamond",serif; font-size:16px; font-style:italic; font-weight:400; letter-spacing:.38em; color:#fff; white-space:nowrap; text-shadow:0 0 24px rgba(232,17,45,.9),0 0 8px rgba(232,17,45,.6),0 1px 4px rgba(0,0,0,.9); }
-  .hdr-tdots { position:absolute; bottom:28px; left:50%; transform:translateX(-50%); display:grid; grid-template-columns:repeat(7,7px); grid-template-rows:repeat(7,7px); gap:2px; z-index:2; }
+  .hdr-aktf span { font-family:"Noto Serif JP",serif; font-size:16px; font-style:italic; font-weight:400; letter-spacing:.38em; color:#fff; white-space:nowrap; text-shadow:0 0 24px rgba(232,17,45,.9),0 0 8px rgba(232,17,45,.6),0 1px 4px rgba(0,0,0,.9); }
+  .hdr-tdots { position:absolute; bottom:13px; left:50%; transform:translateX(-50%); display:grid; grid-template-columns:repeat(9,7px); grid-template-rows:repeat(7,7px); gap:2px; z-index:2; }
   .hdr-dot { width:4px; height:6px; border-radius:50% 50% 30% 30%; align-self:end; }
   .hdr-silhouette { position:absolute; bottom:0; left:50%; transform:translateX(calc(-50% + 80px)); z-index:6; opacity:.92; mix-blend-mode:screen; }
-  .hdr-sil { position:absolute; bottom:0; left:0; right:0; height:60px; z-index:1; }
-  .hdr-pitch { position:absolute; bottom:0; left:8%; right:8%; height:20px; background:linear-gradient(180deg,#0d2e0d,#0a200a); border-radius:50% 50% 0 0/40% 40% 0 0; }
-  .hdr-pitch::before { content:"STAGE"; position:absolute; top:5px; left:50%; transform:translateX(-50%); font-size:7px; letter-spacing:.3em; color:rgba(255,255,255,.18); font-family:"Cormorant Garamond",serif; }
   .hdr-body { padding:14px 24px 16px; }
   .hdr-sub { font-family:"Noto Serif JP",serif; font-weight:300; font-size:16px; letter-spacing:.1em; color:#fff; }
   .hdr-row { display:flex; align-items:center; justify-content:space-between; margin-top:14px; }
   .stats { display:flex; gap:22px; }
-  .stat-n { font-family:"Cormorant Garamond",serif; font-size:24px; color:var(--gold-lt); line-height:1; }
+  .stat-n { font-family:"Noto Serif JP",serif; font-size:24px; color:var(--gold-lt); line-height:1; }
   .stat-l { font-size:9px; color:rgba(255,255,255,.45); letter-spacing:.14em; margin-top:2px; }
   .add-btn { background:rgba(255,255,255,.18); border:1.5px solid rgba(255,255,255,.35); color:#fff; border-radius:50%; width:44px; height:44px; font-size:22px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 
@@ -322,94 +393,103 @@ const CSS = `
 
   /* Tour card */
   .tour-card { background:var(--ink); border-radius:14px; margin-bottom:12px; overflow:hidden; box-shadow:0 2px 10px var(--shadow); border:1px solid rgba(192,21,42,.2); }
-  .tour-card-hdr { display:flex; align-items:center; gap:12px; padding:10px 16px; cursor:pointer; }
-  .tour-card-bar { width:3px; height:28px; border-radius:2px; flex-shrink:0; }
+  .tour-vis-wrap { height:110px; overflow:hidden; cursor:pointer; position:relative; flex-shrink:0; display:block; width:100%; }
+  .tour-vis-wrap > svg, .tour-vis-wrap svg { width:100% !important; height:110px !important; display:block; }
+  .tour-vis-wrap > div { width:100%; height:110px; }
+  .tour-card-hdr { display:flex; align-items:center; gap:12px; padding:12px 16px; cursor:pointer; }
+  .tour-card-bar { width:3px; height:44px; border-radius:2px; flex-shrink:0; }
   .tour-card-info { flex:1; min-width:0; }
-  .tour-card-count { font-size:10px; color:rgba(255,255,255,.5); }
+  .tour-card-name { font-family:"Noto Serif JP",serif; font-size:22px; font-weight:300; color:#fff; line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; letter-spacing:.05em; }
+  .tour-card-period { font-size:11px; color:var(--gold-lt); margin-top:3px; letter-spacing:.04em; }
+  .tour-card-count { font-size:11px; color:rgba(255,255,255,.4); margin-top:2px; }
   .tour-card-arrow { font-size:18px; color:rgba(255,255,255,.3); transition:transform .2s; flex-shrink:0; }
   .tour-card-arrow.open { transform:rotate(90deg); }
 
   /* RED OCEAN visual */
-  .red-vis { height:110px; background:linear-gradient(180deg,#0a0204,#1a0208 50%,#2a0510); position:relative; overflow:hidden; cursor:pointer; }
+  .red-vis { height:110px; background:linear-gradient(180deg,#0a0204,#1a0208 50%,#2a0510); position:relative; overflow:hidden; }
   .red-vis::before { content:""; position:absolute; inset:0; background:radial-gradient(ellipse 300px 30px at 50% 85%,rgba(232,17,45,.35),transparent 70%),radial-gradient(ellipse 200px 20px at 30% 70%,rgba(192,21,42,.2),transparent 70%),radial-gradient(ellipse 200px 20px at 70% 60%,rgba(192,21,42,.2),transparent 70%); }
   .red-wm { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; z-index:1; }
-  .red-wm span { font-family:"Cormorant Garamond",serif; font-size:48px; font-weight:300; letter-spacing:.2em; color:rgba(255,255,255,.75); white-space:nowrap; }
+  .red-wm span { font-family:"Noto Serif JP",serif; font-size:48px; font-weight:300; letter-spacing:.2em; color:rgba(255,255,255,.75); white-space:nowrap; }
   .red-waves { position:absolute; bottom:0; left:0; right:0; }
   .red-wave { position:absolute; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,rgba(232,17,45,.3) 25%,rgba(255,80,100,.5) 50%,rgba(232,17,45,.3) 75%,transparent); }
   .red-wave:nth-child(1){bottom:8px} .red-wave:nth-child(2){bottom:16px;opacity:.6} .red-wave:nth-child(3){bottom:24px;opacity:.3}
   .red-ocean-dots { position:absolute; bottom:30px; left:0; right:0; display:flex; justify-content:center; flex-wrap:wrap; gap:3px; padding:0 12px; z-index:2; }
   .rod { width:3px; height:8px; border-radius:2px 2px 0 0; }
   .red-badge { position:absolute; top:12px; right:12px; background:var(--gold); color:#fff; font-size:8px; font-weight:700; letter-spacing:.15em; padding:3px 9px; border-radius:3px; z-index:3; }
-  .red-label { position:absolute; bottom:10px; left:16px; right:50px; font-family:"Noto Serif JP",serif; font-size:11px; font-weight:600; color:#fff; z-index:3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .red-arrow { position:absolute; bottom:10px; right:16px; color:rgba(255,255,255,.3); font-size:16px; z-index:3; }
 
   /* ZONE visual */
-  .zone-vis { height:110px; background:linear-gradient(160deg,#060e1c,#0d1e38 45%,#091628); position:relative; overflow:hidden; cursor:pointer; }
+  .zone-vis { height:110px; background:linear-gradient(160deg,#060e1c,#0d1e38 45%,#091628); position:relative; overflow:hidden; }
   .zone-vis::before { content:""; position:absolute; inset:0; background:radial-gradient(ellipse 160px 90px at 15% 20%,rgba(80,160,255,.14),transparent 65%),radial-gradient(ellipse 120px 70px at 85% 75%,rgba(60,130,220,.12),transparent 65%),radial-gradient(ellipse 200px 40px at 50% 100%,rgba(40,100,180,.18),transparent 70%); }
   .zone-vis::after { content:""; position:absolute; bottom:28px; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(100,170,255,.25) 30%,rgba(140,200,255,.45) 50%,rgba(100,170,255,.25) 70%,transparent); }
   .zone-wm { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; }
-  .zone-wm span { font-family:"Cormorant Garamond",serif; font-size:52px; font-weight:300; letter-spacing:.32em; color:rgba(255,255,255,.75); white-space:nowrap; }
+  .zone-wm span { font-family:"Noto Serif JP",serif; font-size:52px; font-weight:300; letter-spacing:.32em; color:rgba(255,255,255,.75); white-space:nowrap; }
   .zone-dots-svg { position:absolute; inset:0; width:100%; height:100%; }
   .zone-badge { position:absolute; top:12px; right:12px; background:rgba(80,150,255,.2); border:1px solid rgba(100,170,255,.35); color:rgba(160,210,255,.9); font-size:8px; font-weight:700; letter-spacing:.15em; padding:3px 9px; border-radius:3px; }
-  .zone-label { position:absolute; bottom:10px; left:16px; right:50px; font-family:"Noto Serif JP",serif; font-size:11px; font-weight:600; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .zone-arrow { position:absolute; bottom:10px; right:16px; color:rgba(100,160,255,.45); font-size:16px; }
-
-  /* User-added tour visual */
-  .user-vis { height:110px; background:linear-gradient(160deg,color-mix(in srgb,var(--uv-color) 60%,#000),color-mix(in srgb,var(--uv-color) 30%,#000)); position:relative; overflow:hidden; cursor:pointer; }
-  .user-vis::before { content:""; position:absolute; inset:0; background:radial-gradient(ellipse 250px 50px at 50% 100%,color-mix(in srgb,var(--uv-color) 40%,transparent),transparent 70%); }
-  .user-vis-wm { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; padding:0 16px; pointer-events:none; }
-  .user-vis-wm span { font-family:"Noto Serif JP",serif; font-size:15px; font-weight:600; letter-spacing:.08em; color:rgba(255,255,255,.9); text-align:center; line-height:1.5; }
-  .user-vis-sub { position:absolute; top:14px; left:16px; font-family:"Cormorant Garamond",serif; font-style:italic; font-size:12px; color:var(--gold-lt); letter-spacing:.1em; }
-  .user-vis-badge { position:absolute; top:12px; right:12px; background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.3); color:rgba(255,255,255,.85); font-size:8px; font-weight:700; letter-spacing:.15em; padding:3px 9px; border-radius:3px; }
-  .user-vis-arrow { position:absolute; bottom:10px; right:16px; color:rgba(255,255,255,.3); font-size:16px; }
 
   /* Lives list */
   .lives-list { border-top:1px solid rgba(255,255,255,.06); }
-  .live-item { display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid rgba(255,255,255,.04); cursor:pointer; }
+  .live-item { display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid rgba(255,255,255,.04); cursor:pointer; position:relative; }
   .live-item:last-child { border-bottom:none; }
   .live-item:active { background:rgba(255,255,255,.05); }
+  .live-del-wrap { position:relative; flex-shrink:0; }
+  .live-del { background:rgba(192,21,42,.15); border:1px solid rgba(192,21,42,.3); color:rgba(255,100,100,.8); border-radius:50%; width:28px; height:28px; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:background .15s; }
+  .live-del:hover { background:rgba(192,21,42,.45); color:#fff; }
+  .live-del-tip { position:absolute; right:36px; top:50%; transform:translateY(-50%); background:rgba(28,10,12,.92); color:#fff; font-size:11px; padding:4px 10px; border-radius:6px; white-space:nowrap; pointer-events:none; opacity:0; transition:opacity .15s; }
+  .live-del-wrap:hover .live-del-tip { opacity:1; }
+  .del-dialog-overlay { position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:200; display:flex; align-items:center; justify-content:center; padding:24px; }
+  .del-dialog { background:var(--paper); border-radius:16px; padding:24px 22px; width:100%; max-width:320px; box-shadow:0 8px 32px rgba(0,0,0,.3); }
+  .del-dialog-ttl { font-family:"Noto Serif JP",serif; font-size:16px; font-weight:600; color:var(--ink); margin-bottom:8px; }
+  .del-dialog-body { font-size:13px; color:rgba(28,10,12,.6); line-height:1.7; margin-bottom:20px; }
+  .del-dialog-body strong { color:var(--ink); }
+  .del-dialog-btns { display:flex; gap:10px; }
+  .del-dialog-cancel { flex:1; background:transparent; border:1.5px solid rgba(28,10,12,.2); color:rgba(28,10,12,.6); border-radius:10px; padding:12px; font-size:14px; cursor:pointer; font-family:"Noto Serif JP",serif; }
+  .del-dialog-confirm { flex:1; background:var(--red); border:none; color:#fff; border-radius:10px; padding:12px; font-size:14px; cursor:pointer; font-family:"Noto Serif JP",serif; font-weight:600; }
   .live-item-emoji { font-size:22px; flex-shrink:0; }
   .live-item-info { flex:1; min-width:0; }
-  .live-item-date { font-family:"Cormorant Garamond",serif; font-size:11px; color:rgba(232,17,45,.8); letter-spacing:.12em; margin-bottom:2px; }
+  .live-item-date { font-family:"Noto Serif JP",serif; font-size:11px; color:rgba(232,17,45,.8); letter-spacing:.12em; margin-bottom:2px; }
   .live-item-venue { font-size:13px; font-weight:600; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .live-item-seat { font-size:10px; color:rgba(255,255,255,.35); margin-top:2px; }
-  .live-item-arrow { font-size:14px; color:rgba(255,255,255,.2); flex-shrink:0; }
 
   /* Modal */
   .overlay { position:fixed; inset:0; background:rgba(28,10,12,.78); z-index:100; display:flex; align-items:flex-end; backdrop-filter:blur(5px); }
   .modal { background:var(--paper); border-radius:24px 24px 0 0; width:100%; max-height:92vh; overflow-y:auto; padding:0 0 44px; }
-  .modal-handle { width:36px; height:4px; background:rgba(192,21,42,.18); border-radius:2px; margin:14px auto 0; }
+  .modal-handle { width:36px; height:4px; background:rgba(192,21,42,.18); border-radius:2px; margin:0 auto 12px; display:block; }
+  .modal-nav { position:sticky; top:0; z-index:10; display:flex; flex-direction:column; background:var(--paper); border-bottom:1px solid rgba(192,21,42,.08); box-shadow:0 2px 8px rgba(28,10,12,.06); padding:12px 18px 14px; }
+  .modal-nav-btns { display:flex; align-items:center; justify-content:space-between; }
+  .nav-back { display:flex; align-items:center; gap:4px; background:rgba(192,21,42,.08); border:1.5px solid rgba(192,21,42,.2); color:var(--red); font-size:15px; font-family:"Noto Serif JP",serif; cursor:pointer; padding:11px 18px; border-radius:10px; font-weight:500; }
+  .nav-back::before { content:"‹"; font-size:22px; line-height:1; margin-right:2px; }
+  .nav-right { display:flex; gap:8px; align-items:center; }
   .mhero { padding:24px 24px 20px; margin-bottom:20px; position:relative; overflow:hidden; }
   .mhero.red { background:linear-gradient(140deg,var(--red-deep),var(--red)); }
-  .mhero.red::after { content:"RED OCEAN"; position:absolute; bottom:-14px; right:-4px; font-family:"Cormorant Garamond",serif; font-size:50px; font-weight:300; color:rgba(255,255,255,.05); white-space:nowrap; pointer-events:none; }
+  .mhero.red::after { content:"RED OCEAN"; position:absolute; bottom:-14px; right:-4px; font-family:"Noto Serif JP",serif; font-size:50px; font-weight:300; color:rgba(255,255,255,.05); white-space:nowrap; pointer-events:none; }
   .mhero.dark { background:linear-gradient(140deg,var(--red-deep),var(--ink)); }
   .mhero.dark::after { content:"東方神起"; position:absolute; bottom:-16px; right:-8px; font-family:"Noto Serif JP",serif; font-size:62px; font-weight:300; color:rgba(255,255,255,.04); white-space:nowrap; pointer-events:none; }
-  .mdate { font-family:"Cormorant Garamond",serif; font-style:italic; font-size:12px; color:rgba(255,255,255,.6); letter-spacing:.18em; margin-bottom:6px; }
+  .mdate { font-family:"Noto Serif JP",serif; font-style:italic; font-size:12px; color:rgba(255,255,255,.6); letter-spacing:.18em; margin-bottom:6px; }
   .mtitle { font-family:"Noto Serif JP",serif; font-size:17px; font-weight:600; color:#fff; line-height:1.5; }
-  .msub { font-family:"Cormorant Garamond",serif; font-style:italic; font-size:13px; color:var(--gold-lt); letter-spacing:.1em; margin-top:4px; }
-  .mvenue { margin-top:9px; font-size:12px; color:rgba(255,255,255,.5); }
+  .msub { font-family:"Noto Serif JP",serif; font-style:italic; font-size:13px; color:var(--gold-lt); letter-spacing:.1em; margin-top:4px; }
+  .mvenue { margin-top:9px; font-size:14px; color:rgba(255,255,255,.6); }
   .mtime-row { display:flex; gap:16px; margin-top:8px; }
-  .mtime { display:flex; gap:5px; font-size:11px; color:rgba(255,255,255,.45); align-items:center; }
-  .mtime b { color:rgba(255,255,255,.85); }
-  .edit-btn { background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.35); color:#fff; border-radius:8px; padding:6px 12px; font-size:11px; cursor:pointer; white-space:nowrap; margin-left:12px; flex-shrink:0; }
+  .mtime { display:flex; gap:5px; font-size:13px; color:rgba(255,255,255,.5); align-items:center; }
+  .mtime b { color:rgba(255,255,255,.9); }
+  .edit-btn { background:var(--red); border:none; color:#fff; border-radius:10px; padding:11px 22px; font-size:15px; font-weight:500; cursor:pointer; white-space:nowrap; font-family:"Noto Serif JP",serif; }
   .msec { padding:0 20px; margin-bottom:20px; }
-  .msec-ttl { font-size:10px; letter-spacing:.2em; color:rgba(28,10,12,.38); text-transform:uppercase; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+  .msec-ttl { font-size:13px; letter-spacing:.15em; color:rgba(28,10,12,.5); text-transform:uppercase; margin-bottom:12px; display:flex; align-items:center; gap:8px; font-weight:600; }
   .msec-ttl::after { content:""; flex:1; height:1px; background:rgba(192,21,42,.12); }
 
   /* Setlist */
   .setlist { list-style:none; }
   .enc-div { display:flex; align-items:center; gap:10px; margin:12px 0 6px; }
   .enc-line { flex:1; height:1px; background:rgba(192,21,42,.15); }
-  .enc-lbl { font-size:9px; letter-spacing:.2em; color:var(--red); text-transform:uppercase; white-space:nowrap; }
-  .sl-item { display:flex; align-items:center; padding:8px 0; border-bottom:1px solid rgba(192,21,42,.06); gap:12px; }
-  .sl-num { font-family:"Cormorant Garamond",serif; font-size:15px; color:rgba(192,21,42,.35); width:22px; text-align:right; flex-shrink:0; }
-  .sl-name { font-size:13px; color:var(--ink); line-height:1.3; flex:1; }
+  .enc-lbl { font-size:11px; letter-spacing:.2em; color:var(--red); text-transform:uppercase; white-space:nowrap; }
+  .sl-item { display:flex; align-items:center; padding:10px 0; border-bottom:1px solid rgba(192,21,42,.06); gap:12px; }
+  .sl-num { font-family:"Noto Serif JP",serif; font-size:17px; color:rgba(192,21,42,.4); width:24px; text-align:right; flex-shrink:0; }
+  .sl-name { font-size:16px; color:var(--ink); line-height:1.4; flex:1; text-align:left; }
   .sl-enc { margin-left:auto; background:rgba(192,21,42,.1); color:var(--red); font-size:8px; padding:2px 8px; border-radius:10px; flex-shrink:0; }
 
   /* Seat map */
-  .seat-map { background:#1c0a0c; border-radius:12px; padding:16px; }
+  .seat-map { background:#1c0a0c; border-radius:12px; padding:10px; }
   .seat-info { text-align:center; margin-top:8px; font-size:11px; color:rgba(255,255,255,.45); }
-  .seat-info strong { color:var(--gold-lt); font-family:"Cormorant Garamond",serif; font-size:14px; }
+  .seat-info strong { color:var(--gold-lt); font-family:"Noto Serif JP",serif; font-size:14px; }
 
   /* Photos */
   .photos { display:flex; gap:10px; overflow-x:auto; padding-bottom:4px; scrollbar-width:none; }
@@ -419,27 +499,27 @@ const CSS = `
   .photo-thumb { position:relative; width:80px; height:80px; flex-shrink:0; }
   .photo-thumb img { width:80px; height:80px; border-radius:8px; object-fit:cover; }
   .photo-del { position:absolute; top:-6px; right:-6px; background:var(--red); color:#fff; border:none; border-radius:50%; width:20px; height:20px; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
   /* Memory */
   .mem-list { display:flex; flex-direction:column; gap:10px; }
   .mem-card { background:var(--offwhite); border-radius:12px; border:1px solid rgba(192,21,42,.08); overflow:hidden; }
   .mem-hdr { display:flex; align-items:center; gap:8px; padding:9px 14px; background:rgba(192,21,42,.04); border-bottom:1px solid rgba(192,21,42,.07); }
   .mem-icon { font-size:14px; }
-  .mem-lbl { font-size:9px; letter-spacing:.18em; text-transform:uppercase; color:rgba(28,10,12,.4); }
-  .mem-text { padding:12px 14px; font-size:13px; color:rgba(28,10,12,.72); line-height:1.85; font-family:"Noto Serif JP",serif; white-space:pre-line; }
-  .comment { background:var(--offwhite); border-radius:10px; padding:14px; border:1px solid rgba(192,21,42,.08); font-size:13px; color:rgba(28,10,12,.68); line-height:1.85; font-family:"Noto Serif JP",serif; white-space:pre-line; }
+  .mem-lbl { font-size:11px; letter-spacing:.15em; text-transform:uppercase; color:rgba(28,10,12,.45); }
+  .mem-text { padding:12px 14px; font-size:14.5px; color:rgba(28,10,12,.72); line-height:1.85; font-family:"Noto Serif JP",serif; white-space:pre-line; text-align:left; }
   .empty { color:rgba(28,10,12,.28); font-style:italic; }
 
   /* Tips */
   .tips-box { background:linear-gradient(135deg,#1c0a0c,#2a0d10); border-radius:12px; overflow:hidden; }
   .tips-hdr { display:flex; align-items:center; gap:8px; padding:12px 16px 10px; border-bottom:1px solid rgba(255,255,255,.07); }
   .tips-hdr-ic { font-size:16px; }
-  .tips-hdr-tt { font-size:10px; letter-spacing:.18em; text-transform:uppercase; color:rgba(255,255,255,.5); }
+  .tips-hdr-tt { font-size:13px; letter-spacing:.12em; text-transform:uppercase; color:rgba(255,255,255,.6); font-weight:600; }
   .tips-badge { margin-left:auto; background:var(--gold); color:var(--ink); font-size:8px; font-weight:700; padding:2px 7px; border-radius:3px; }
   .tip-item { display:flex; align-items:flex-start; gap:10px; padding:9px 16px; border-bottom:1px solid rgba(255,255,255,.04); }
   .tip-item:last-child { border-bottom:none; }
-  .tip-cat { flex-shrink:0; background:rgba(192,21,42,.25); border-radius:6px; padding:3px 8px; font-size:8px; color:rgba(255,255,255,.7); margin-top:1px; white-space:nowrap; }
-  .tip-text { font-size:12px; color:rgba(255,255,255,.75); line-height:1.7; }
+  .tip-cat { flex-shrink:0; background:rgba(192,21,42,.25); border-radius:6px; padding:4px 10px; font-size:11px; color:rgba(255,255,255,.8); margin-top:1px; white-space:nowrap; }
+  .tip-text { font-size:15px; color:rgba(255,255,255,.85); line-height:1.75; text-align:left; }
   .tip-text strong { color:var(--gold-lt); font-weight:600; }
   .tip-url { display:flex; align-items:center; gap:6px; margin-top:6px; }
   .tip-url-text { font-size:10px; color:rgba(100,160,255,.7); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; }
@@ -448,32 +528,84 @@ const CSS = `
 
   /* Form */
   .fsec { padding:0 20px; margin-bottom:14px; }
-  .flbl { font-size:10px; letter-spacing:.15em; color:rgba(28,10,12,.4); text-transform:uppercase; margin-bottom:7px; display:flex; align-items:center; gap:5px; }
-  .finp { width:100%; background:var(--offwhite); border:1px solid rgba(192,21,42,.14); border-radius:10px; padding:12px 14px; font-size:14px; font-family:"Noto Sans JP",sans-serif; color:var(--ink); outline:none; transition:border .2s; }
+  .flbl { font-size:12px; letter-spacing:.12em; color:rgba(28,10,12,.45); text-transform:uppercase; margin-bottom:7px; display:flex; align-items:center; gap:5px; }
+  .finp { width:100%; background:var(--offwhite); border:1px solid rgba(192,21,42,.14); border-radius:10px; padding:12px 14px; font-size:14px; font-family:"Noto Serif JP",serif; color:var(--ink); outline:none; transition:border .2s; }
   .finp:focus { border-color:var(--red); }
   .frow { display:flex; gap:10px; }
   .fgrp { flex:1; }
-  .fdivider { margin:4px 20px 14px; font-size:10px; letter-spacing:.2em; color:rgba(192,21,42,.5); text-transform:uppercase; padding-top:14px; border-top:1px solid rgba(192,21,42,.1); }
-  .save-btn { width:calc(100% - 40px); margin:10px 20px 0; background:linear-gradient(135deg,var(--red),var(--red-deep)); color:#fff; border:none; border-radius:12px; padding:16px; font-family:"Noto Serif JP",serif; font-size:15px; letter-spacing:.1em; cursor:pointer; }
-  .outline-btn { width:calc(100% - 40px); margin:10px 20px 0; background:transparent; border:1.5px solid var(--red); color:var(--red); border-radius:12px; padding:14px; font-family:"Noto Serif JP",serif; font-size:14px; letter-spacing:.1em; cursor:pointer; }
+  .fdivider { margin:4px 20px 14px; font-size:12px; letter-spacing:.15em; color:rgba(192,21,42,.65); text-transform:uppercase; padding-top:14px; border-top:1px solid rgba(192,21,42,.1); font-weight:600; }
+  .save-btn { width:calc(100% - 40px); margin:10px 20px 0; background:linear-gradient(135deg,var(--red),var(--red-deep)); color:#fff; border:none; border-radius:12px; padding:16px; font-family:"Noto Serif JP",serif; font-size:15px; letter-spacing:.1em; cursor:pointer; transition:transform .1s, box-shadow .1s, background .2s; }
+  .save-btn:active { transform:scale(.97); }
+  .save-btn.saving { background:linear-gradient(135deg,#2a8a3e,#1a6b2e); box-shadow:0 0 0 3px rgba(42,138,62,.3); pointer-events:none; }
+
+  /* 2択メニュー */
+  .add-menu-overlay { position:fixed; inset:0; z-index:100; display:flex; align-items:flex-end; }
+  .add-menu-bg { position:absolute; inset:0; background:rgba(28,10,12,.5); backdrop-filter:blur(4px); }
+  .add-menu { position:relative; width:100%; background:var(--paper); border-radius:24px 24px 0 0; padding:16px 20px 40px; z-index:1; }
+  .add-menu-handle { width:36px; height:4px; background:rgba(192,21,42,.18); border-radius:2px; margin:0 auto 20px; }
+  .add-menu-ttl { font-size:11px; letter-spacing:.2em; color:rgba(28,10,12,.35); text-transform:uppercase; margin-bottom:14px; }
+  .add-menu-btn { display:flex; align-items:center; gap:14px; padding:16px 18px; background:var(--offwhite); border:1.5px solid rgba(192,21,42,.1); border-radius:14px; cursor:pointer; margin-bottom:10px; width:100%; text-align:left; transition:border-color .15s, background .15s; }
+  .add-menu-btn:hover { border-color:rgba(192,21,42,.35); background:var(--mist); }
+  .add-menu-icon { font-size:26px; flex-shrink:0; }
+  .add-menu-label { font-family:"Noto Serif JP",serif; font-size:15px; font-weight:600; color:var(--ink); }
+  .add-menu-desc { font-size:11px; color:rgba(28,10,12,.4); margin-top:2px; }
+
+  /* カラープリセット */
+  .color-presets { display:grid; grid-template-columns:repeat(10,1fr); gap:8px; }
+  .color-preset { width:100%; aspect-ratio:1; border-radius:50%; cursor:pointer; border:3px solid transparent; transition:transform .15s, border-color .15s; }
+  .color-preset.selected { border-color:#fff; transform:scale(1.15); }
+
+  /* ビジュアルタイプ選択 */
+
+  /* プレビューダイアログ */
+  .preview-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:200; display:flex; align-items:center; justify-content:center; padding:20px; backdrop-filter:blur(6px); }
+  .preview-dialog { background:var(--paper); border-radius:20px; width:100%; max-width:360px; overflow:hidden; box-shadow:0 16px 48px rgba(0,0,0,.4); }
+  .preview-vis-wrap { width:100%; height:140px; overflow:hidden; position:relative; }
+  .preview-body { padding:20px 22px 24px; }
+  .preview-ttl { font-family:"Noto Serif JP",serif; font-size:15px; font-weight:600; color:var(--ink); margin-bottom:6px; }
+  .preview-btns { display:flex; gap:10px; }
+  .preview-retry { flex:1; background:transparent; border:1.5px solid rgba(28,10,12,.2); color:rgba(28,10,12,.6); border-radius:10px; padding:12px; font-size:13px; cursor:pointer; }
+  .preview-confirm { flex:1; background:var(--red); border:none; color:#fff; border-radius:10px; padding:12px; font-size:13px; cursor:pointer; font-weight:600; }
+
+  /* ツアー削除ボタン */
+  .tour-del-wrap { position:relative; flex-shrink:0; margin-left:4px; }
+  .tour-del { background:rgba(192,21,42,.12); border:1px solid rgba(192,21,42,.25); color:rgba(255,100,100,.7); border-radius:50%; width:26px; height:26px; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .15s; }
+  .tour-del:hover { background:rgba(192,21,42,.4); color:#fff; }
+  .tour-del-tip { position:absolute; right:32px; top:50%; transform:translateY(-50%); background:rgba(28,10,12,.92); color:#fff; font-size:11px; padding:4px 10px; border-radius:6px; white-space:nowrap; pointer-events:none; opacity:0; transition:opacity .15s; }
+  .tour-del-wrap:hover .tour-del-tip { opacity:1; }
 `;
 
 // ─────────────────────────────────────────────
 //  ユーティリティ
 // ─────────────────────────────────────────────
 
-function usePhotoUpload(initial = []) {
-  const [photos, setPhotos] = useState(initial);
-  const handleAdd = (e) => {
-    Array.from(e.target.files).forEach(file => {
-      const reader = new FileReader();
-      reader.onload = ev => setPhotos(prev => [...prev, ev.target.result]);
-      reader.readAsDataURL(file);
-    });
+function usePhotoUpload(initial = [], liveId = "unknown") {
+  const [photos,    setPhotos]    = useState(initial);
+  const [uploading, setUploading] = useState(false);
+
+  const handleAdd = async (e) => {
+    const files = Array.from(e.target.files);
     e.target.value = "";
+    if (!files.length) return;
+    setUploading(true);
+    try {
+      const urls = await Promise.all(files.map(async (file) => {
+        const path = `photos/${liveId}/${Date.now()}_${file.name}`;
+        const ref = storageRef(storage, path);
+        await uploadBytes(ref, file);
+        return await getDownloadURL(ref);
+      }));
+      setPhotos(prev => [...prev, ...urls].slice(0, 6));
+    } catch (err) {
+      alert("写真のアップロードに失敗しました。もう一度お試しください。");
+    } finally {
+      setUploading(false);
+    }
   };
+
   const handleRemove = (i) => setPhotos(prev => prev.filter((_,idx) => idx !== i));
-  return { photos, handleAdd, handleRemove };
+
+  return { photos, handleAdd, handleRemove, uploading };
 }
 
 const parseTips = (text) =>
@@ -482,11 +614,22 @@ const parseTips = (text) =>
 const tipsToText = (tips) =>
   (tips || []).map(t => t.text.replace(/<[^>]+>/g, "")).join("\n");
 
+// ツアー期間を計算（ライブのdateから自動算出）
+const getTourPeriod = (lives) => {
+  const dates = (lives || [])
+    .map(l => l.date)
+    .filter(d => d && d !== "日付未設定" && /^\d{4}\.\d{2}\.\d{2}$/.test(d))
+    .sort();
+  if (dates.length === 0) return "yyyy.mm.dd";
+  if (dates.length === 1) return dates[0];
+  return `${dates[0]} – ${dates[dates.length - 1]}`;
+};
+
 // ─────────────────────────────────────────────
 //  共通サブコンポーネント
 // ─────────────────────────────────────────────
 
-function PhotoEditor({ photos, onAdd, onRemove }) {
+function PhotoEditor({ photos, onAdd, onRemove, uploading }) {
   return (
     <div className="fsec">
       <div style={{ display:"flex", gap:10, flexWrap:"wrap", marginBottom:8 }}>
@@ -499,8 +642,14 @@ function PhotoEditor({ photos, onAdd, onRemove }) {
             <button className="photo-del" onClick={() => onRemove(i)}>×</button>
           </div>
         ))}
+        {uploading && (
+          <div style={{width:80,height:80,borderRadius:8,background:"var(--mist)",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:6}}>
+            <div style={{width:24,height:24,border:"3px solid var(--red)",borderTopColor:"transparent",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
+            <div style={{fontSize:9,color:"var(--red)"}}>送信中</div>
+          </div>
+        )}
       </div>
-      {photos.length < 6 && (
+      {!uploading && photos.length < 6 && (
         <input type="file" accept="image/*" multiple style={{fontSize:13,color:"var(--ink)"}} onChange={onAdd}/>
       )}
       <div style={{fontSize:10,color:"rgba(28,10,12,.3)",marginTop:6}}>最大6枚まで追加できます</div>
@@ -511,31 +660,18 @@ function PhotoEditor({ photos, onAdd, onRemove }) {
 // セクション順統一コンポーネント群
 // 順番：①セットリスト ②座席 ③写真 ④思い出メモ ⑤Tips
 
-function MemorySection({ memory, comment }) {
-  if (memory) {
-    return (
-      <div className="mem-list">
-        {MEM_FIELDS.map(({ key, icon, label }) => (
-          <div key={key} className="mem-card">
-            <div className="mem-hdr"><span className="mem-icon">{icon}</span><span className="mem-lbl">{label}</span></div>
-            <div className="mem-text">
-              {memory[key]
-                ? memory[key]
-                : <span className="empty">まだ記録されていません…</span>
-              }
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-  if (comment) return <div className="comment">{comment}</div>;
+function MemorySection({ memory }) {
   return (
     <div className="mem-list">
       {MEM_FIELDS.map(({ key, icon, label }) => (
         <div key={key} className="mem-card">
           <div className="mem-hdr"><span className="mem-icon">{icon}</span><span className="mem-lbl">{label}</span></div>
-          <div className="mem-text"><span className="empty">まだ記録されていません…</span></div>
+          <div className="mem-text">
+            {memory?.[key]
+              ? memory[key]
+              : <span className="empty">まだ記録されていません…</span>
+            }
+          </div>
         </div>
       ))}
     </div>
@@ -548,7 +684,7 @@ function TipItem({ tip }) {
     <div className="tip-item">
       <span className="tip-cat">{tip.cat}</span>
       <div style={{flex:1}}>
-        <span className="tip-text" dangerouslySetInnerHTML={{__html:tip.text}}/>
+        <div className="tip-text" dangerouslySetInnerHTML={{__html:tip.text}}/>
         {tip.url && (
           <div className="tip-url">
             <span className="tip-url-text">{tip.url}</span>
@@ -568,7 +704,7 @@ function TipsSection({ tips }) {
     <div className="tips-box">
       <div className="tips-hdr"><span className="tips-hdr-ic">📌</span><span className="tips-hdr-tt">Live を楽しむための Tips</span><span className="tips-badge">TIPS</span></div>
       {(!tips || tips.length === 0)
-        ? <div className="tip-item"><span className="tip-text" style={{color:"rgba(255,255,255,.28)",fontStyle:"italic"}}>まだ Tips が記録されていません…</span></div>
+        ? <div className="tip-item"><div className="tip-text" style={{color:"rgba(255,255,255,.28)",fontStyle:"italic"}}>まだ Tips が記録されていません…</div></div>
         : tips.map((tip, i) => <TipItem key={i} tip={tip}/>)
       }
     </div>
@@ -619,65 +755,107 @@ function Silhouette() {
   return <img className="hdr-silhouette" src={SILHOUETTE_IMG} alt="" style={{height:"95px",width:"auto",objectFit:"contain"}}/>;
 }
 
-function TourCard({ tour, onLiveSelect }) {
+function DeleteDialog({ live, onCancel, onConfirm }) {
+  return (
+    <div className="del-dialog-overlay" onClick={onCancel}>
+      <div className="del-dialog" onClick={e => e.stopPropagation()}>
+        <div className="del-dialog-ttl">ライブを削除しますか？</div>
+        <div className="del-dialog-body">
+          <strong>{live.date} {live.venue}</strong> の記録を削除します。<br/>この操作は元に戻せません。
+        </div>
+        <div className="del-dialog-btns">
+          <button className="del-dialog-cancel" onClick={onCancel}>キャンセル</button>
+          <button className="del-dialog-confirm" onClick={onConfirm}>削除する</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TourCard({ tour, onLiveSelect, onLiveDelete, onTourDelete }) {
   const [open, setOpen] = useState(false);
+  const [delTarget, setDelTarget] = useState(null);
+  const [delTour, setDelTour] = useState(false);
   const totalSongs = tour.lives.reduce((s,l) => s+l.songs.length, 0);
+  const period = getTourPeriod(tour.lives);
   const ROD = ["#e8112d","#c0152a","#ff3355","#d42035","#ff1a40","#b00d22"];
 
-  // ビジュアルヘッダー（タイトルを1回だけ表示する唯一の場所）
+  // 統一ビジュアル（110px固定）
   const renderVis = () => {
-    if (tour.vis === "red") return (
-      <div className="red-vis" onClick={() => setOpen(o=>!o)}>
-        <div className="red-wm"><span>RED OCEAN</span></div>
-        <div className="red-ocean-dots">
-          {Array.from({length:60}).map((_,i) => (
-            <div key={i} className="rod" style={{background:ROD[i%ROD.length],height:6+(i%5)*3,opacity:0.4+(i%4)*0.15,boxShadow:`0 0 3px ${ROD[i%ROD.length]}`}}/>
-          ))}
+    if (tour.id === "tour-20th") return (
+      <div className="tour-vis-wrap" onClick={() => setOpen(o=>!o)}>
+        <div className="red-vis" style={{height:"100%"}}>
+          <div className="red-wm">{tour.sub && <span>{tour.sub}</span>}</div>
+          <div className="red-ocean-dots">
+            {Array.from({length:60}).map((_,i) => (
+              <div key={i} className="rod" style={{background:ROD[i%ROD.length],height:6+(i%5)*3,opacity:0.4+(i%4)*0.15,boxShadow:`0 0 3px ${ROD[i%ROD.length]}`}}/>
+            ))}
+          </div>
+          <div className="red-waves"><div className="red-wave"/><div className="red-wave"/><div className="red-wave"/></div>
+          <div className="red-badge">20TH ANNIVERSARY</div>
         </div>
-        <div className="red-waves"><div className="red-wave"/><div className="red-wave"/><div className="red-wave"/></div>
-        {tour.year && <div className="red-badge">{tour.year}</div>}
-        <div className="red-label">{tour.name}</div>
-        <div className="red-arrow">›</div>
       </div>
     );
-    if (tour.vis === "zone") return (
-      <div className="zone-vis" onClick={() => setOpen(o=>!o)}>
-        <div className="zone-wm"><span>ZONE</span></div>
-        <svg className="zone-dots-svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
-          <circle cx="50" cy="50" r="4" fill="rgba(180,220,255,0.9)"/>
-          <circle cx="50" cy="50" r="8" fill="rgba(120,180,255,0.2)"/>
-          <circle cx="50" cy="50" r="14" fill="rgba(80,140,255,0.08)"/>
-          {ZONE_DOTS.map(({key,x,y,opacity,size}) => (
-            <circle key={key} cx={x} cy={y} r={size/2} fill={`rgba(140,200,255,${opacity})`}/>
-          ))}
-        </svg>
-        {tour.year && <div className="zone-badge">{tour.year}</div>}
-        <div className="zone-label">{tour.name}</div>
-        <div className="zone-arrow">›</div>
+    if (tour.id === "tour-zone") return (
+      <div className="tour-vis-wrap" onClick={() => setOpen(o=>!o)}>
+        <div className="zone-vis" style={{height:"100%"}}>
+          <div className="zone-wm">{tour.sub && <span>{tour.sub}</span>}</div>
+          <svg className="zone-dots-svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+            <circle cx="50" cy="50" r="4" fill="rgba(180,220,255,0.9)"/>
+            <circle cx="50" cy="50" r="8" fill="rgba(120,180,255,0.2)"/>
+            <circle cx="50" cy="50" r="14" fill="rgba(80,140,255,0.08)"/>
+            {ZONE_DOTS.map(({key,x,y,opacity,size}) => (
+              <circle key={key} cx={x} cy={y} r={size/2} fill={`rgba(140,200,255,${opacity})`}/>
+            ))}
+          </svg>
+          <div className="zone-badge">20TH ANNIVERSARY</div>
+        </div>
       </div>
     );
-    // ユーザー追加ツアー — tour.color ベースの汎用ビジュアル
-    const c = tour.color || "#8b0d1c";
-    return (
-      <div className="user-vis" style={{"--uv-color": c}} onClick={() => setOpen(o=>!o)}>
-        <div className="user-vis-wm"><span>{tour.name}</span></div>
-        {tour.sub && <div className="user-vis-sub">{tour.sub}</div>}
-        {tour.year && <div className="user-vis-badge">{tour.year}</div>}
-        <div className="user-vis-arrow">›</div>
+    const toImgUrl = (svg) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(stripSvgText(svg))}`;
+    const renderUserVis = (svgUrl) => (
+      <div className="tour-vis-wrap" onClick={() => setOpen(o=>!o)}>
+        <img src={svgUrl} style={{width:"100%",height:"110px",display:"block",objectFit:"cover"}} alt=""/>
+        <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",pointerEvents:"none",zIndex:3}}>
+          {tour.sub && <span style={{fontFamily:'"Noto Serif JP",serif',fontSize:"13px",fontWeight:300,letterSpacing:".15em",color:"rgba(255,255,255,.6)",textShadow:"0 1px 8px rgba(0,0,0,.6)"}}>{tour.sub}</span>}
+        </div>
       </div>
     );
+    if (tour.svgCode) return renderUserVis(toImgUrl(tour.svgCode));
+    const c1 = darken(tour.color, 0.55), c2 = darken(tour.color, 0.2);
+    const fallbackSvg = baseSvg(c1, c2, '');
+    return renderUserVis(toImgUrl(fallbackSvg));
   };
 
   return (
     <div className="tour-card">
+      {delTour && (
+        <DeleteDialog
+          live={{date: tour.name, venue:`全${tour.lives.length}公演が削除されます`}}
+          onCancel={() => setDelTour(false)}
+          onConfirm={() => { onTourDelete(tour.id); setDelTour(false); }}
+        />
+      )}
+      {delTarget && (
+        <DeleteDialog
+          live={delTarget}
+          onCancel={() => setDelTarget(null)}
+          onConfirm={() => { onLiveDelete(delTarget.id); setDelTarget(null); }}
+        />
+      )}
       {renderVis()}
-      {/* ビジュアルがある場合はタイトル行を出さない。ビジュアルが自身の唯一の見出し */}
       <div className="tour-card-hdr" onClick={() => setOpen(o=>!o)}>
-        <div className="tour-card-bar" style={{background:tour.color||"#8b0d1c"}}/>
+        <div className="tour-card-bar" style={{background:tour.color}}/>
         <div className="tour-card-info">
+          <div className="tour-card-name">{tour.name}</div>
+          <div className="tour-card-period">{period}</div>
           <div className="tour-card-count">{tour.lives.length}公演 · {totalSongs}曲</div>
         </div>
         <div className={"tour-card-arrow "+(open?"open":"")}>›</div>
+        <div className="tour-del-wrap" onClick={e => { e.stopPropagation(); setDelTour(true); }}>
+          <div className="tour-del-tip">ツアーを削除</div>
+          <button className="tour-del">×</button>
+        </div>
       </div>
       {open && (
         <div className="lives-list">
@@ -689,7 +867,10 @@ function TourCard({ tour, onLiveSelect }) {
                 <div className="live-item-venue">{live.venue}</div>
                 <div className="live-item-seat">{live.seat.split(" / ")[0]}</div>
               </div>
-              <div className="live-item-arrow">›</div>
+              <div className="live-del-wrap" onClick={e => { e.stopPropagation(); setDelTarget(live); }}>
+                <div className="live-del-tip">削除する</div>
+                <button className="live-del">×</button>
+              </div>
             </div>
           ))}
         </div>
@@ -728,7 +909,7 @@ function StadiumMap({ highlight, seat }) {
   ];
   return (
     <div className="seat-map">
-      <svg viewBox="0 0 320 300" width="100%" style={{display:"block"}}>
+      <svg viewBox="0 0 320 300" width="100%" style={{display:"block", maxWidth:"240px", margin:"0 auto"}}>
         <ellipse cx="160" cy="148" rx="148" ry="132" fill="#0d0404" stroke="#3a1515" strokeWidth="2"/>
         <path d="M26 100 Q12 148 26 196 L52 186 Q40 148 52 110Z" fill={hl("W2F")||S2}/>
         <path d="M294 100 Q308 148 294 196 L268 186 Q280 148 268 110Z" fill={hl("E2F")||S2}/>
@@ -769,28 +950,39 @@ function LiveModal({ live:liveProp, tour, onClose, onUpdate }) {
   const [live, setLive] = useState(liveProp);
 
   const handleUpdate = (id, changes) => {
-    setLive(prev => ({...prev, ...changes}));
-    onUpdate(id, changes);
+    const merged = { ...live, ...changes };
+    setLive(merged);       // モーダル内の表示を即時更新
+    onUpdate(id, changes); // 親(App)のallLivesとFirestoreに保存
   };
 
   if (editing) return (
-    <EditForm live={live} onClose={() => setEditing(false)} onGoHome={onClose} onUpdate={handleUpdate}/>
+    <EditForm
+      live={live}
+      onClose={() => setEditing(false)}
+      onGoHome={onClose}
+      onUpdate={handleUpdate}
+    />
   );
 
   return (
     <div className="overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()}>
-        <div className="modal-handle"/>
-        <div className={"mhero "+(isFeatured?"red":"dark")}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-            <div>
-              <div className="mdate">{live.dateLabel||live.date}</div>
-              <div className="mtitle">{tour.name}</div>
-              {tour.sub && <div className="msub">{tour.sub}</div>}
-              <div className="mvenue">📍 {live.venue}</div>
-              {live.open && <div className="mtime-row"><div className="mtime">開場 <b>{live.open}</b></div><div className="mtime">開演 <b>{live.start}</b></div></div>}
+        <div className="modal-nav">
+          <div className="modal-handle"/>
+          <div className="modal-nav-btns">
+            <button className="nav-back" onClick={onClose}>ホームに戻る</button>
+            <div className="nav-right">
+              <button className="edit-btn" onClick={() => setEditing(true)}>✏️ 編集</button>
             </div>
-            <button className="edit-btn" onClick={() => setEditing(true)}>✏️ 編集</button>
+          </div>
+        </div>
+        <div className={"mhero "+(isFeatured?"red":"dark")}>
+          <div>
+            <div className="mdate">{live.dateLabel||live.date}</div>
+            <div className="mtitle">{tour.name}</div>
+            {tour.sub && <div className="msub">{tour.sub}</div>}
+            <div className="mvenue">📍 {live.venue}</div>
+            {live.open && <div className="mtime-row"><div className="mtime">開場 <b>{live.open}</b></div><div className="mtime">開演 <b>{live.start}</b></div></div>}
           </div>
         </div>
         {/* ①セットリスト */}
@@ -820,7 +1012,7 @@ function LiveModal({ live:liveProp, tour, onClose, onUpdate }) {
         {/* ④思い出メモ */}
         <div className="msec">
           <div className="msec-ttl">思い出メモ</div>
-          <MemorySection memory={live.memory} comment={live.comment}/>
+          <MemorySection memory={live.memory}/>
         </div>
         {/* ⑤Tips */}
         <div className="msec">
@@ -833,12 +1025,41 @@ function LiveModal({ live:liveProp, tour, onClose, onUpdate }) {
 }
 
 // ── 編集フォーム ──
+// 保存してホームに戻るボタン（押下フィードバック付き）
+function SaveHomeButton({ doSave, onGoHome }) {
+  const [state, setState] = useState("idle"); // idle | saving | done
+
+  const handleClick = () => {
+    if (state !== "idle") return;
+    setState("saving");
+    doSave();
+    setTimeout(() => {
+      setState("done");
+      setTimeout(() => onGoHome(), 600);
+    }, 400);
+  };
+
+  const label = state === "saving" ? "保存中…"
+              : state === "done"   ? "✓ 保存しました！"
+              : "🏠 保存してホームに戻る";
+
+  return (
+    <button
+      className={"save-btn" + (state !== "idle" ? " saving" : "")}
+      style={{marginBottom:24, ...(state === "done" ? {background:"linear-gradient(135deg,#2a8a3e,#1a6b2e)"} : {})}}
+      onClick={handleClick}
+    >
+      {label}
+    </button>
+  );
+}
+
 function EditForm({ live, onClose, onGoHome, onUpdate }) {
   const [seat, setSeat]         = useState(live.seat||"");
   const [setlist, setSetlist]   = useState((live.songs||[]).map((s,i) => `${i+1}. ${s.t}${s.e?" [アンコール]":""}`).join("\n"));
   const [mem, setMem]           = useState(live.memory||{before:"",after:"",highlight:"",other:""});
   const [tipsText, setTipsText] = useState(tipsToText(live.tips));
-  const { photos, handleAdd, handleRemove } = usePhotoUpload(live.photos||[]);
+  const { photos, handleAdd, handleRemove, uploading } = usePhotoUpload(live.photos||[], live.id);
 
   const doSave = () => {
     const songs = setlist.split("\n").map(l=>l.trim()).filter(Boolean).map((line,i) => {
@@ -852,7 +1073,12 @@ function EditForm({ live, onClose, onGoHome, onUpdate }) {
   return (
     <div className="overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()}>
-        <div className="modal-handle"/>
+        <div className="modal-nav">
+          <div className="modal-handle"/>
+          <div className="modal-nav-btns">
+            <button className="nav-back" onClick={onClose}>詳細に戻る</button>
+          </div>
+        </div>
         <div className="mhero dark">
           <div className="mdate">EDIT</div>
           <div className="mtitle">{live.dateLabel||live.date}</div>
@@ -871,23 +1097,453 @@ function EditForm({ live, onClose, onGoHome, onUpdate }) {
         </div>
         {/* ③写真 */}
         <div className="fdivider">写真</div>
-        <PhotoEditor photos={photos} onAdd={handleAdd} onRemove={handleRemove}/>
+        <PhotoEditor photos={photos} onAdd={handleAdd} onRemove={handleRemove} uploading={uploading}/>
         {/* ④思い出メモ */}
         <div className="fdivider">思い出メモ</div>
         <MemInputs mem={mem} setMem={setMem}/>
         {/* ⑤Tips */}
         <div className="fdivider">Live を楽しむための Tips</div>
         <TipsInput value={tipsText} onChange={e=>setTipsText(e.target.value)}/>
-        <button className="save-btn"   onClick={() => { doSave(); onClose();   }}>変更を保存する</button>
-        <button className="outline-btn" onClick={() => { doSave(); onGoHome(); }}>保存してホームに戻る</button>
+        <SaveHomeButton doSave={doSave} onGoHome={onGoHome}/>
       </div>
     </div>
   );
 }
 
 // ── 新規追加フォーム ──
-function AddForm({ onClose, onSave, onSaveAndClose }) {
-  const [tourName,  setTourName]  = useState("");
+// ─────────────────────────────────────────────
+//  ツアー追加関連
+// ─────────────────────────────────────────────
+
+const TOUR_COLOR_PRESETS = [
+  { label:"クリムゾン",  value:"#c0152a" },
+  { label:"スカーレット", value:"#e8112d" },
+  { label:"バーガンディ", value:"#7a0d1c" },
+  { label:"コーラル",    value:"#d94f3a" },
+  { label:"ネイビー",    value:"#1a3a6b" },
+  { label:"ロイヤルブルー",value:"#1a4aaa" },
+  { label:"スカイ",      value:"#1a6aaa" },
+  { label:"ティール",    value:"#0a5a5a" },
+  { label:"エメラルド",  value:"#0a6a3a" },
+  { label:"フォレスト",  value:"#1a4a1a" },
+  { label:"パープル",    value:"#5a1a7a" },
+  { label:"バイオレット", value:"#3a1a8a" },
+  { label:"ラベンダー",  value:"#6a3a9a" },
+  { label:"ローズ",      value:"#8a1a5a" },
+  { label:"マゼンタ",    value:"#9a0a6a" },
+  { label:"ゴールド",    value:"#8a6a10" },
+  { label:"アンバー",    value:"#8a4a0a" },
+  { label:"ブラック",    value:"#1a1a1a" },
+  { label:"チャコール",  value:"#2a2a3a" },
+  { label:"スレート",    value:"#2a3a4a" },
+];
+
+// ─────────────────────────────────────────────
+//  ビジュアルパターン定義（10種）
+// ─────────────────────────────────────────────
+
+const VIS_PATTERNS = [
+  {
+    keys: ["波","海","ocean","wave","うねり","水面"],
+    label: "波", emoji: "🌊",
+    render: (color, name) => {
+      const c1 = darken(color,0.55), c2 = darken(color,0.25);
+      const cl = lighten(color,0.55);
+      const waves = [0,1,2,3].map(i => {
+        const y = 60+i*14, amp = 18-i*3, op = 0.55-i*0.1;
+        return `<path d="M-10 ${y} C40 ${y-amp} 90 ${y+amp} 140 ${y} S240 ${y-amp} 290 ${y} S390 ${y+amp} 420 ${y}" fill="none" stroke="${cl}" stroke-width="${3-i*0.5}" opacity="${op}" stroke-linecap="round"/>`;
+      }).join('');
+      const glow = `<ellipse cx="200" cy="110" rx="220" ry="50" fill="${cl}" opacity="0.08"/>`;
+      const foam = Array.from({length:12},(_,i)=>{
+        const x=(i*37+10)%400, y=45+(i*23)%35;
+        return `<circle cx="${x}" cy="${y}" r="${1+i%3}" fill="#fff" opacity="${0.08+i%4*0.04}"/>`;
+      }).join('');
+      return baseSvg(c1,c2,glow+waves+foam);
+    }
+  },
+  {
+    keys: ["星","スター","star","night","夜空","銀河","galaxy"],
+    label: "星空", emoji: "✨",
+    render: (color, name) => {
+      const c1 = darken(color,0.6), c2 = darken(color,0.3);
+      const cl = lighten(color,0.6);
+      const stars = Array.from({length:45},(_,i)=>{
+        const x=(i*137.5+i*i*0.3)%398+1, y=(i*83.7+i*3)%105+2;
+        const r=i%7===0?2.8:i%3===0?1.8:1.0;
+        const op=(0.3+(i*31%55)/100).toFixed(2);
+        return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="#fff" opacity="${op}"/>`;
+      }).join('');
+      const moon = `<circle cx="340" cy="28" r="22" fill="${cl}" opacity="0.12"/><circle cx="340" cy="28" r="14" fill="${cl}" opacity="0.15"/><circle cx="340" cy="28" r="7" fill="#fff" opacity="0.4"/>`;
+      const glow = `<ellipse cx="340" cy="28" rx="60" ry="40" fill="${cl}" opacity="0.06"/>`;
+      return baseSvg(c1,c2,stars+glow+moon);
+    }
+  },
+  {
+    keys: ["渦","spiral","螺旋","swirl","回転","vortex"],
+    label: "渦", emoji: "🌀",
+    render: (color, name) => {
+      const c1 = darken(color,0.55), c2 = darken(color,0.2);
+      const cl = lighten(color,0.65);
+      const spirals = [1,2,3].map(ring => {
+        const pts = Array.from({length:48},(_,i)=>{
+          const a=(i/48)*Math.PI*2*ring*1.5;
+          const d=6+i*(ring*0.9);
+          const x=200+Math.cos(a)*d, y=55+Math.sin(a)*d*0.5;
+          return `${x.toFixed(1)},${y.toFixed(1)}`;
+        }).join(' ');
+        return `<polyline points="${pts}" fill="none" stroke="${cl}" stroke-width="${1.2-ring*0.2}" opacity="${0.45-ring*0.08}"/>`;
+      }).join('');
+      const core = `<circle cx="200" cy="55" r="12" fill="${cl}" opacity="0.15"/><circle cx="200" cy="55" r="5" fill="${cl}" opacity="0.35"/><circle cx="200" cy="55" r="2" fill="#fff" opacity="0.7"/>`;
+      const glow = `<ellipse cx="200" cy="55" rx="80" ry="45" fill="${cl}" opacity="0.05"/>`;
+      return baseSvg(c1,c2,glow+spirals+core);
+    }
+  },
+  {
+    keys: ["雨","rain","しずく","drop","rainfall"],
+    label: "雨", emoji: "🌧",
+    render: (color, name) => {
+      const c1 = darken(color,0.6), c2 = darken(color,0.3);
+      const cl = lighten(color,0.6);
+      const drops = Array.from({length:35},(_,i)=>{
+        const x=(i*23+i*i*0.5)%400, y=(i*31)%85;
+        const len=8+i%5*5, op=(0.2+(i*7%40)/100).toFixed(2);
+        return `<line x1="${x}" y1="${y}" x2="${x-5}" y2="${y+len}" stroke="${cl}" stroke-width="1.4" opacity="${op}" stroke-linecap="round"/>`;
+      }).join('');
+      const puddle = `<ellipse cx="200" cy="100" rx="160" ry="8" fill="${cl}" opacity="0.06"/>`;
+      const splash = Array.from({length:6},(_,i)=>{
+        const x=40+i*65, r=3+i%3*2;
+        return `<ellipse cx="${x}" cy="100" rx="${r}" ry="1.5" fill="${cl}" opacity="0.12"/>`;
+      }).join('');
+      return baseSvg(c1,c2,drops+puddle+splash);
+    }
+  },
+  {
+    keys: ["炎","fire","flame","情熱","burn","熱"],
+    label: "炎", emoji: "🔥",
+    render: (color, name) => {
+      const c1 = darken(color,0.6), c2 = darken(color,0.2);
+      const cl = lighten(color,0.6);
+      const cl2 = lighten(color,0.85);
+      const flames = Array.from({length:12},(_,i)=>{
+        const x=15+i*33, h=30+(i%4)*22, w=12+(i%3)*8, op=(0.2+(i*11%35)/100).toFixed(2);
+        return `<path d="M${x} 112 C${x-w} ${112-h*0.4} ${x-w*0.5} ${112-h*0.75} ${x} ${112-h} C${x+w*0.5} ${112-h*0.75} ${x+w} ${112-h*0.4} ${x} 112" fill="${cl}" opacity="${op}"/>`;
+      }).join('');
+      const embers = Array.from({length:15},(_,i)=>{
+        const x=(i*57+20)%380, y=(i*43)%80;
+        return `<circle cx="${x}" cy="${y}" r="${0.8+i%3*0.6}" fill="${cl2}" opacity="${(0.15+i%5*0.07).toFixed(2)}"/>`;
+      }).join('');
+      const glow = `<ellipse cx="200" cy="112" rx="200" ry="30" fill="${cl}" opacity="0.1"/>`;
+      return baseSvg(c1,c2,glow+flames+embers);
+    }
+  },
+  {
+    keys: ["格子","grid","幾何学","geometric","lattice","mesh"],
+    label: "格子", emoji: "⬛",
+    render: (color, name) => {
+      const c1 = darken(color,0.55), c2 = darken(color,0.2);
+      const cl = lighten(color,0.5);
+      const hlines = Array.from({length:7},(_,i)=>
+        `<line x1="0" y1="${i*18}" x2="400" y2="${i*18}" stroke="${cl}" stroke-width="0.7" opacity="0.22"/>`).join('');
+      const vlines = Array.from({length:17},(_,i)=>
+        `<line x1="${i*26}" y1="0" x2="${i*26}" y2="110" stroke="${cl}" stroke-width="0.7" opacity="0.22"/>`).join('');
+      const nodes = Array.from({length:35},(_,i)=>{
+        const x=(i%7)*65+10, y=Math.floor(i/7)*22+5;
+        const op=(0.15+(i*13%40)/100).toFixed(2);
+        return `<rect x="${x-2}" y="${y-2}" width="4" height="4" fill="${cl}" opacity="${op}" transform="rotate(45 ${x} ${y})"/>`;
+      }).join('');
+      const glow = `<ellipse cx="200" cy="55" rx="120" ry="40" fill="${cl}" opacity="0.05"/>`;
+      return baseSvg(c1,c2,glow+hlines+vlines+nodes);
+    }
+  },
+  {
+    keys: ["爆発","burst","放射","radiation","explosion","エネルギー"],
+    label: "爆発", emoji: "💥",
+    render: (color, name) => {
+      const c1 = darken(color,0.6), c2 = darken(color,0.2);
+      const cl = lighten(color,0.7);
+      const rays = Array.from({length:24},(_,i)=>{
+        const angle=(i/24)*Math.PI*2;
+        const len=40+(i%4)*20;
+        const x1=200+Math.cos(angle)*12, y1=55+Math.sin(angle)*8;
+        const x2=200+Math.cos(angle)*len, y2=55+Math.sin(angle)*len*0.6;
+        const op=(0.15+(i*7%40)/100).toFixed(2);
+        return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${cl}" stroke-width="${2-i%3*0.4}" opacity="${op}" stroke-linecap="round"/>`;
+      }).join('');
+      const rings = [25,45,65].map((r,i)=>
+        `<circle cx="200" cy="55" r="${r}" fill="none" stroke="${cl}" stroke-width="0.8" opacity="${0.12-i*0.03}"/>`).join('');
+      const core = `<circle cx="200" cy="55" r="14" fill="${cl}" opacity="0.18"/><circle cx="200" cy="55" r="7" fill="${cl}" opacity="0.3"/><circle cx="200" cy="55" r="3" fill="#fff" opacity="0.75"/>`;
+      const glow = `<ellipse cx="200" cy="55" rx="100" ry="60" fill="${cl}" opacity="0.06"/>`;
+      return baseSvg(c1,c2,glow+rays+rings+core);
+    }
+  },
+  {
+    keys: ["粒子","particle","浮遊","float","bubble","泡"],
+    label: "粒子", emoji: "🫧",
+    render: (color, name) => {
+      const c1 = darken(color,0.58), c2 = darken(color,0.22);
+      const cl = lighten(color,0.65);
+      const bubbles = Array.from({length:28},(_,i)=>{
+        const x=(i*127.3+i*i*0.2)%395+2, y=(i*83.7)%105+2;
+        const r=1.5+(i%5)*1.2, op=(0.12+(i*17%50)/100).toFixed(2);
+        return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="none" stroke="${cl}" stroke-width="0.8" opacity="${op}"/><circle cx="${(x+r*0.3).toFixed(1)}" cy="${(y-r*0.3).toFixed(1)}" r="${(r*0.25).toFixed(1)}" fill="#fff" opacity="${(parseFloat(op)*0.6).toFixed(2)}"/>`;
+      }).join('');
+      const glow1=`<ellipse cx="130" cy="40" rx="60" ry="35" fill="${cl}" opacity="0.05"/>`;
+      const glow2=`<ellipse cx="280" cy="75" rx="50" ry="30" fill="${cl}" opacity="0.05"/>`;
+      return baseSvg(c1,c2,glow1+glow2+bubbles);
+    }
+  },
+  {
+    keys: ["桜","花","bloom","flower","petal","spring","春"],
+    label: "桜", emoji: "🌸",
+    render: (color, name) => {
+      const c1 = darken(color,0.55), c2 = darken(color,0.2);
+      const cl = lighten(color,0.6);
+      const petals = Array.from({length:20},(_,i)=>{
+        const x=(i*113.7+15)%385, y=(i*67.3+8)%100;
+        const angle=(i*47)%360, size=4+(i%4)*2.5;
+        const op=(0.2+(i*13%45)/100).toFixed(2);
+        return `<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="${size}" ry="${(size*0.55).toFixed(1)}" fill="${cl}" opacity="${op}" transform="rotate(${angle} ${x.toFixed(1)} ${y.toFixed(1)})"/>`;
+      }).join('');
+      const branch = `<path d="M0 90 Q80 70 160 50 Q240 35 320 45 Q370 50 400 40" fill="none" stroke="${cl}" stroke-width="1.5" opacity="0.15"/>`;
+      const glow = `<ellipse cx="200" cy="55" rx="180" ry="50" fill="${cl}" opacity="0.04"/>`;
+      return baseSvg(c1,c2,glow+branch+petals);
+    }
+  },
+  {
+    keys: ["光","光線","beam","ray","shine","輝き","glow"],
+    label: "光線", emoji: "✴️",
+    render: (color, name) => {
+      const c1 = darken(color,0.6), c2 = darken(color,0.25);
+      const cl = lighten(color,0.7);
+      const beams = Array.from({length:8},(_,i)=>{
+        const x=30+i*50, w=20+i%3*15, op=(0.06+i%4*0.02).toFixed(2);
+        return `<polygon points="${x},0 ${x+w},0 ${x+w+30},110 ${x-10},110" fill="${cl}" opacity="${op}"/>`;
+      }).join('');
+      const source = `<ellipse cx="200" cy="-10" rx="280" ry="50" fill="${cl}" opacity="0.1"/>`;
+      const rays = Array.from({length:5},(_,i)=>{
+        const x=80+i*60;
+        return `<line x1="${x}" y1="0" x2="${x+20}" y2="110" stroke="#fff" stroke-width="0.6" opacity="${0.06+i%3*0.02}"/>`;
+      }).join('');
+      const glow = `<ellipse cx="200" cy="20" rx="150" ry="30" fill="${cl}" opacity="0.08"/>`;
+      return baseSvg(c1,c2,source+beams+rays+glow);
+    }
+  },
+];
+
+// ユーティリティ
+function darken(hex, amt) {
+  const r=Math.max(0,parseInt(hex.slice(1,3),16)-Math.round(amt*180));
+  const g=Math.max(0,parseInt(hex.slice(3,5),16)-Math.round(amt*180));
+  const b=Math.max(0,parseInt(hex.slice(5,7),16)-Math.round(amt*180));
+  return '#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
+}
+function lighten(hex, amt) {
+  const r=Math.min(255,parseInt(hex.slice(1,3),16)+Math.round(amt*220));
+  const g=Math.min(255,parseInt(hex.slice(3,5),16)+Math.round(amt*220));
+  const b=Math.min(255,parseInt(hex.slice(5,7),16)+Math.round(amt*220));
+  return '#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
+}
+function baseSvg(c1, c2, content) {
+  const grad = `<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${c1}"/><stop offset="100%" stop-color="${c2}"/></linearGradient><radialGradient id="vglow" cx="50%" cy="50%" r="60%"><stop offset="0%" stop-color="${c2}" stop-opacity="0.3"/><stop offset="100%" stop-color="${c1}" stop-opacity="0"/></radialGradient></defs><rect width="400" height="110" fill="url(#bg)"/><rect width="400" height="110" fill="url(#vglow)"/>`;
+  return `<svg viewBox="0 0 400 110" width="100%" height="110" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">${grad}${content}</svg>`;
+}
+function glowText(name, cl) {
+  const display = name || "NEW TOUR";
+  const fontSize = display.length > 20 ? 15 : display.length > 12 ? 19 : 24;
+  return `<text x="200" y="63" text-anchor="middle" dominant-baseline="middle" font-family="Noto Serif JP,serif" font-size="${fontSize}" fill="${cl}" opacity="0.12" letter-spacing="4">${display}</text><text x="200" y="63" text-anchor="middle" dominant-baseline="middle" font-family="Noto Serif JP,serif" font-size="${fontSize}" fill="#fff" opacity="0.9" letter-spacing="4" font-weight="300">${display}</text>`;
+}
+
+// 既存svgCodeに含まれるテキスト要素を除去（旧データ互換）
+const stripSvgText = (svg) => svg ? svg.replace(/<text[\s\S]*?<\/text>/gi, '') : svg;
+
+// キーワード解析して即時SVG生成（API不要）
+function generateTourVisualSync(tourName, color, userPrompt) {
+  const text = (userPrompt || tourName || "").toLowerCase();
+  // キーワードマッチング（複数マッチは最初を優先）
+  const matched = VIS_PATTERNS.find(p => p.keys.some(k => text.includes(k)));
+  const pattern = matched || VIS_PATTERNS[7]; // デフォルト：粒子
+  return pattern.render(color, tourName);
+}
+
+function TourVisPreviewDialog({ tourName, svgCode, onRetry, onConfirm }) {
+  return (
+    <div className="preview-overlay" onClick={e => e.stopPropagation()}>
+      <div className="preview-dialog">
+        <div className="preview-vis-wrap">
+          <div dangerouslySetInnerHTML={{__html:svgCode}} style={{width:"100%",height:"100%"}}/>
+        </div>
+        <div className="preview-body">
+          <div className="preview-ttl">{tourName||"ツアー名未設定"}</div>
+          <div className="preview-btns">
+            <button className="preview-retry" onClick={onRetry}>🔄 別パターン</button>
+            <button className="preview-confirm" onClick={onConfirm}>✓ これで追加する</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AddTourForm({ onClose, onSaveTour }) {
+  const [tourName,   setTourName]   = useState("");
+  const [tourSub,    setTourSub]    = useState("");
+  const [color,      setColor]      = useState("#c0152a");
+  const [userPrompt, setUserPrompt] = useState("");
+  const [preview,    setPreview]    = useState(false);
+  const [svgCode,    setSvgCode]    = useState(null);
+  const [state,      setState]      = useState("idle");
+
+  const handleGenerate = () => {
+    const svg = generateTourVisualSync(tourName, color, userPrompt);
+    setSvgCode(svg);
+    setPreview(true);
+  };
+
+  // 別パターン：マッチしなかった他のパターンをランダムに試す
+  const handleRetry = () => {
+    const text = (userPrompt || tourName || "").toLowerCase();
+    const matched = VIS_PATTERNS.findIndex(p => p.keys.some(k => text.includes(k)));
+    const others = VIS_PATTERNS.filter((_, i) => i !== matched);
+    const pick = others[Math.floor(Math.random() * others.length)];
+    setSvgCode(pick.render(color, tourName));
+  };
+
+  const handleConfirm = () => {
+    if (state !== "idle") return;
+    setState("saving");
+    onSaveTour({
+      tourId:    `tour-user-${Date.now()}`,
+      tourName:  tourName.trim() || "新しいツアー",
+      tourSub:   tourSub.trim() || null,
+      tourColor: color,
+      featured:  false,
+      svgCode:   svgCode,
+    });
+    setTimeout(() => { setState("done"); setTimeout(onClose, 600); }, 400);
+  };
+
+  return (
+    <>
+      {preview && svgCode && (
+        <TourVisPreviewDialog
+          tourName={tourName} svgCode={svgCode}
+          onRetry={handleRetry}
+          onConfirm={handleConfirm}
+        />
+      )}
+      <div className="overlay" onClick={onClose}>
+        <div className="modal" onClick={e => e.stopPropagation()}>
+          <div className="modal-nav">
+            <div className="modal-handle"/>
+            <div className="modal-nav-btns">
+              <button className="nav-back" onClick={onClose}>ホームに戻る</button>
+            </div>
+          </div>
+          <div className="mhero dark"><div className="mdate">NEW TOUR</div><div className="mtitle">ツアーを追加する</div></div>
+
+          <div className="fsec">
+            <label className="flbl">ツアー名</label>
+            <input className="finp" placeholder="例: 東方神起 LIVE TOUR 2027" value={tourName} onChange={e=>setTourName(e.target.value)}/>
+          </div>
+          <div className="fsec">
+            <label className="flbl">サブタイトル（任意）</label>
+            <input className="finp" placeholder="例: 〜ANOTHER WORLD〜" value={tourSub} onChange={e=>setTourSub(e.target.value)}/>
+          </div>
+
+          <div className="fdivider">テーマカラー</div>
+          <div className="fsec">
+            <div className="color-presets">
+              {TOUR_COLOR_PRESETS.map(p => (
+                <div key={p.value} className={"color-preset"+(color===p.value?" selected":"")}
+                  style={{background:p.value}} title={p.label}
+                  onClick={() => setColor(p.value)}/>
+              ))}
+            </div>
+          </div>
+
+          <div className="fdivider">ビジュアルイメージ</div>
+          <div className="fsec">
+            <label className="flbl" style={{marginBottom:8}}>
+              イメージを自由に記述してください
+            </label>
+            <div style={{fontSize:11,color:"rgba(28,10,12,.38)",marginBottom:10,lineHeight:1.7}}>
+              波・星・渦・雨・炎・格子・爆発・粒子・桜・光… などのキーワードを含めると、そのパターンが適用されます。複数のキーワードも使えます。
+            </div>
+            <textarea className="finp" rows={3} style={{resize:"none",lineHeight:1.8}}
+              placeholder={"例：夜の海に波が広がるような幻想的な雰囲気\n例：無数の星が輝く銀河をイメージ\n例：爆発するエネルギーと光の放射"}
+              value={userPrompt} onChange={e=>setUserPrompt(e.target.value)}/>
+          </div>
+
+          <div style={{padding:"0 20px 8px",fontSize:11,color:"rgba(28,10,12,.35)",lineHeight:1.7}}>
+            💡 記述なしでもツアー名からパターンを自動選択します
+          </div>
+
+          <button className="save-btn" style={{marginBottom:24}} onClick={handleGenerate}>
+            ✨ プレビューを生成する
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// 2択メニュー
+function AddMenu({ onClose, onSelectLive, onSelectTour }) {
+  return (
+    <div className="add-menu-overlay">
+      <div className="add-menu-bg" onClick={onClose}/>
+      <div className="add-menu">
+        <div className="add-menu-handle"/>
+        <div className="add-menu-ttl">追加する内容を選択</div>
+        <button className="add-menu-btn" onClick={onSelectLive}>
+          <span className="add-menu-icon">🎵</span>
+          <div>
+            <div className="add-menu-label">ライブを追加</div>
+            <div className="add-menu-desc">既存ツアーにライブ公演を追加します</div>
+          </div>
+        </button>
+        <button className="add-menu-btn" onClick={onSelectTour}>
+          <span className="add-menu-icon">📋</span>
+          <div>
+            <div className="add-menu-label">ツアーを追加</div>
+            <div className="add-menu-desc">新しいツアーを作成してライブを管理します</div>
+          </div>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// 新規追加用・保存してホームに戻るボタン（フィードバック付き）
+function AddSaveButton({ buildLive, onSaveAndClose }) {
+  const [state, setState] = useState("idle");
+
+  const handleClick = () => {
+    if (state !== "idle") return;
+    const l = buildLive();
+    setState("saving");
+    onSaveAndClose(null, l);
+    setTimeout(() => setState("done"), 400);
+  };
+
+  const label = state === "saving" ? "保存中…"
+              : state === "done"   ? "✓ 保存しました！"
+              : "🏠 保存してホームに戻る";
+
+  return (
+    <button
+      className={"save-btn" + (state !== "idle" ? " saving" : "")}
+      style={{marginBottom:24, ...(state === "done" ? {background:"linear-gradient(135deg,#2a8a3e,#1a6b2e)"} : {})}}
+      onClick={handleClick}
+    >
+      {label}
+    </button>
+  );
+}
+
+function AddForm({ onClose, onSaveAndClose, allTours }) {
+  const [step,      setStep]      = useState("select"); // "select" | "input"
+  const [selTour,   setSelTour]   = useState(null);     // 選択されたツアーentry
   const [date,      setDate]      = useState("");
   const [startTime, setStartTime] = useState("18:00");
   const [venue,     setVenue]     = useState("");
@@ -896,59 +1552,86 @@ function AddForm({ onClose, onSave, onSaveAndClose }) {
   const [seatNo,    setSeatNo]    = useState("");
   const [mem,       setMem]       = useState({before:"",after:"",highlight:"",other:""});
   const [tipsText,  setTipsText]  = useState("");
-  const { photos, handleAdd, handleRemove } = usePhotoUpload([]);
+  const { photos, handleAdd, handleRemove, uploading } = usePhotoUpload([], `new-${Date.now()}`);
 
   const buildLive = () => {
-    if (!tourName.trim()||!date||!venue.trim()) { alert("ツアー名・日付・会場は必須です"); return null; }
     const songs = setlist.split("\n").map(l=>l.trim()).filter(Boolean).map((line,i) => {
       const e = /アンコール/i.test(line);
       const t = line.replace(/^\d+\.\s*/,"").replace(/\s*[\[［]アンコール[\]］]/i,"");
       return { n:i+1, t, ...(e?{e:true}:{}) };
     });
-    const [y,m,d] = date.split("-");
+    const dateParts = date ? date.split("-") : ["","",""];
+    const [y,m,d] = dateParts;
+    const dateStr = date ? `${y}.${m}.${d}` : "日付未設定";
+    const dateLabelStr = date ? `${y}年${parseInt(m)}月${parseInt(d)}日` : "日付未設定";
     return {
-      id:`user-${Date.now()}`, date:`${y}.${m}.${d}`, dateLabel:`${y}年${parseInt(m)}月${parseInt(d)}日`,
-      start:startTime, venue:venue.trim(),
+      id:`user-${Date.now()}`, date:dateStr, dateLabel:dateLabelStr,
+      start:startTime, venue:venue.trim()||"会場未設定",
       seat:[block,seatNo].filter(Boolean).join(" / 座席")||"未設定",
-      highlight:null, tag:venue.trim().slice(0,3), emoji:"🎤",
+      highlight:null, tag:(venue.trim()||"未設定").slice(0,3), emoji:"🎤",
       songs, photos,
       memory:{ before:mem.before.trim(), after:mem.after.trim(), highlight:mem.highlight.trim(), other:mem.other.trim() },
       tips:parseTips(tipsText),
     };
   };
 
-  const reset = () => {
-    setTourName(""); setDate(""); setStartTime("18:00"); setVenue("");
-    setSetlist(""); setBlock(""); setSeatNo("");
-    setMem({before:"",after:"",highlight:"",other:""}); setTipsText("");
-  };
+  // ── ステップ1：ツアー選択 ──
+  if (step === "select") return (
+    <div className="overlay" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-nav">
+          <div className="modal-handle"/>
+          <div className="modal-nav-btns">
+            <button className="nav-back" onClick={onClose}>ホームに戻る</button>
+          </div>
+        </div>
+        <div className="mhero red"><div className="mdate">STEP 1 / 2</div><div className="mtitle">追加先のツアーを選択</div></div>
+        <div style={{padding:"16px 18px 32px",display:"flex",flexDirection:"column",gap:10}}>
+          {allTours.map(tour => (
+            <button key={tour.id}
+              style={{display:"flex",alignItems:"center",gap:14,padding:"14px 16px",background:"var(--offwhite)",border:`1.5px solid ${tour.color}44`,borderRadius:12,cursor:"pointer",textAlign:"left",width:"100%"}}
+              onClick={() => { setSelTour(tour); setStep("input"); }}>
+              <div style={{width:10,height:10,borderRadius:"50%",background:tour.color,flexShrink:0}}/>
+              <div>
+                <div style={{fontFamily:"Noto Serif JP,serif",fontSize:14,fontWeight:600,color:"var(--ink)"}}>{tour.name}</div>
+                <div style={{fontSize:11,color:"rgba(28,10,12,.4)",marginTop:2}}>{tour.lives.length}公演</div>
+              </div>
+              <div style={{marginLeft:"auto",color:"rgba(28,10,12,.25)",fontSize:18}}>›</div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 
+  // ── ステップ2：ライブ情報入力 ──
   return (
     <div className="overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()}>
-        <div className="modal-handle"/>
-        <div className="mhero dark"><div className="mdate">NEW ENTRY</div><div className="mtitle">ライブを記録する</div></div>
-        {/* 基本情報 */}
-        <div className="fsec">
-          <label className="flbl">ツアー・公演名 *</label>
-          <input className="finp" placeholder="例: TVXQ! WORLD TOUR — CIRCLE" value={tourName} onChange={e=>setTourName(e.target.value)}/>
+        <div className="modal-nav">
+          <div className="modal-handle"/>
+          <div className="modal-nav-btns">
+            <button className="nav-back" onClick={() => setStep("select")}>ツアー選択に戻る</button>
+          </div>
+        </div>
+        <div className="mhero red">
+          <div className="mdate">STEP 2 / 2 · {selTour?.name}</div>
+          <div className="mtitle">ライブを記録する</div>
         </div>
         <div className="fsec">
           <div className="frow">
-            <div className="fgrp"><label className="flbl">開催日 *</label><input className="finp" type="date" value={date} onChange={e=>setDate(e.target.value)}/></div>
+            <div className="fgrp"><label className="flbl">開催日</label><input className="finp" type="date" value={date} onChange={e=>setDate(e.target.value)}/></div>
             <div className="fgrp"><label className="flbl">開演時刻</label><input className="finp" type="time" value={startTime} onChange={e=>setStartTime(e.target.value)}/></div>
           </div>
         </div>
         <div className="fsec">
-          <label className="flbl">会場 *</label>
+          <label className="flbl">会場</label>
           <input className="finp" placeholder="例: 東京ドーム" value={venue} onChange={e=>setVenue(e.target.value)}/>
         </div>
-        {/* ①セットリスト */}
         <div className="fdivider">セットリスト</div>
         <div className="fsec">
           <textarea className="finp" rows={5} placeholder={"1. Mirotic\n2. Rising Sun\n3. Before U Go  [アンコール]"} style={{resize:"none",lineHeight:1.8}} value={setlist} onChange={e=>setSetlist(e.target.value)}/>
         </div>
-        {/* ②座席 */}
         <div className="fdivider">座席</div>
         <div className="fsec">
           <div className="frow">
@@ -956,17 +1639,16 @@ function AddForm({ onClose, onSave, onSaveAndClose }) {
             <div className="fgrp"><label className="flbl">座席番号</label><input className="finp" placeholder="34" value={seatNo} onChange={e=>setSeatNo(e.target.value)}/></div>
           </div>
         </div>
-        {/* ③写真 */}
         <div className="fdivider">写真</div>
-        <PhotoEditor photos={photos} onAdd={handleAdd} onRemove={handleRemove}/>
-        {/* ④思い出メモ */}
+        <PhotoEditor photos={photos} onAdd={handleAdd} onRemove={handleRemove} uploading={uploading}/>
         <div className="fdivider">思い出メモ</div>
         <MemInputs mem={mem} setMem={setMem}/>
-        {/* ⑤Tips */}
         <div className="fdivider">Live を楽しむための Tips</div>
         <TipsInput value={tipsText} onChange={e=>setTipsText(e.target.value)}/>
-        <button className="save-btn"    onClick={() => { const l=buildLive(); if(l){ onSave(tourName.trim(),l); reset(); } }}>記録を保存する（続けて入力）</button>
-        <button className="outline-btn" onClick={() => { const l=buildLive(); if(l){ onSaveAndClose(tourName.trim(),l); } }}>保存して閉じる</button>
+        <AddSaveButton
+          buildLive={buildLive}
+          onSaveAndClose={(_, live) => onSaveAndClose(selTour, live)}
+        />
       </div>
     </div>
   );
@@ -977,50 +1659,137 @@ function AddForm({ onClose, onSave, onSaveAndClose }) {
 // ─────────────────────────────────────────────
 
 export default function App() {
-  const [selected,  setSelected]  = useState(null);
-  const [showAdd,   setShowAdd]   = useState(false);
-  const [userLives, setUserLives] = useState(() => loadUserLives());
+  const [selected,    setSelected]    = useState(null);
+  const [showMenu,    setShowMenu]    = useState(false);
+  const [showAdd,     setShowAdd]     = useState(false);
+  const [showAddTour, setShowAddTour] = useState(false);
+  const [allLives,    setAllLives]    = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [error,       setError]       = useState(null);
 
+  // 起動時にFirestoreからデータを取得
+  useEffect(() => {
+    (async () => {
+      try {
+        const lives = await loadFromFirestore();
+        if (lives) {
+          setAllLives(lives);
+        } else {
+          // 初回：初期データをFirestoreに書き込む
+          const initial = buildInitialAllLives();
+          await saveToFirestore(initial);
+          setAllLives(initial);
+        }
+      } catch (e) {
+        setError("データの読み込みに失敗しました。接続を確認してください。");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  // allLivesからツアーカード用の構造を組み立てる
   const allTours = useMemo(() => {
-    if (userLives.length === 0) return TOURS;
-    // キーはname。全フィールドを保持しつつlivesだけ新配列にコピー
-    const map = new Map(TOURS.map(t => [t.name, {...t, lives:[...t.lives]}]));
-    userLives.forEach(ul => {
-      if (map.has(ul.tourName)) {
-        map.get(ul.tourName).lives.push(ul.live);
-      } else {
-        map.set(ul.tourName, {
-          id:`tour-user-${ul.tourName}`,
-          name:ul.tourName,
-          year:ul.live.date.slice(0,4),
-          color:"#8b0d1c",
-          vis:"user",
-          featured:false,
-          lives:[ul.live],
+    const map = new Map();
+    allLives.forEach(entry => {
+      if (!map.has(entry.tourId)) {
+        map.set(entry.tourId, {
+          id:       entry.tourId,
+          name:     entry.tourName,
+          sub:      entry.tourSub,
+          color:    entry.tourColor,
+          featured: entry.featured,
+          svgCode:  entry.svgCode || null,
+          lives:    [],
         });
       }
+      map.get(entry.tourId).lives.push(entry.live);
     });
     return Array.from(map.values());
-  }, [userLives]);
+  }, [allLives]);
 
-  const totalLives = allTours.reduce((s,t) => s+t.lives.length, 0);
-  const totalSongs = allTours.reduce((s,t) => s+t.lives.reduce((ss,l)=>ss+l.songs.length,0), 0);
+  const totalLives = allTours.reduce((s,t) => s + t.lives.length, 0);
+  const totalSongs = allTours.reduce((s,t) => s + t.lives.reduce((ss,l) => ss + l.songs.length, 0), 0);
 
-  const handleSave = (tourName, newLive) => {
-    const updated = [...userLives, {tourName, live:newLive}];
-    setUserLives(updated); saveUserLives(updated);
+  // Firestoreに保存してstateも更新
+  const persist = async (updated) => {
+    setAllLives(updated);
+    try { await saveToFirestore(updated); } catch {}
   };
 
-  const handleSaveAndClose = (tourName, newLive) => {
-    handleSave(tourName, newLive); setShowAdd(false);
+  // 新規ライブ追加（selTourはallToursのtourオブジェクト）
+  const handleSave = (selTour, newLive) => {
+    const entry = {
+      tourId:    selTour.id,
+      tourName:  selTour.name,
+      tourSub:   selTour.sub   || null,
+      tourColor: selTour.color,
+      featured:  selTour.featured || false,
+      svgCode:   selTour.svgCode  || null,
+      live:      newLive,
+    };
+    persist([...allLives, entry]);
   };
 
+  // ライブ削除
+  const handleLiveDelete = (liveId) => {
+    const updated = allLives.filter(entry => entry.live.id !== liveId);
+    persist(updated);
+  };
+
+  // ツアー削除（ツアー内の全ライブも削除）
+  const handleTourDelete = (tourId) => {
+    const updated = allLives.filter(entry => entry.tourId !== tourId);
+    persist(updated);
+  };
+
+  // ツアー新規追加（ライブ0件で作成）
+  const handleTourSave = (tourMeta) => {
+    // ダミーライブ1件を入れてツアーを成立させる（ライブ0件だとallToursに表示されない）
+    const dummyLive = {
+      id: `live-placeholder-${Date.now()}`,
+      date: "未設定", dateLabel: "未設定",
+      open: "", start: "", venue: "未設定",
+      seat: "未設定", highlight: null,
+      tag: "未", emoji: "🎤",
+      songs: [], photos: [],
+      memory: { before:"", after:"", highlight:"", other:"" },
+      tips: [],
+    };
+    const entry = { ...tourMeta, live: dummyLive };
+    persist([...allLives, entry]);
+    setShowAddTour(false);
+  };
   const handleUpdate = (liveId, changes) => {
-    const updated = userLives.map(ul => ul.live.id===liveId ? {...ul, live:{...ul.live,...changes}} : ul);
-    setUserLives(updated); saveUserLives(updated);
-    if (selected && selected.live.id===liveId)
-      setSelected(prev => ({...prev, live:{...prev.live,...changes}}));
+    const updated = allLives.map(entry =>
+      entry.live.id === liveId
+        ? { ...entry, live: { ...entry.live, ...changes } }
+        : entry
+    );
+    persist(updated);
+    if (selected && selected.live.id === liveId) {
+      setSelected(prev => ({ ...prev, live: { ...prev.live, ...changes } }));
+    }
   };
+
+  if (loading) return (
+    <>
+      <style>{CSS}</style>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh",flexDirection:"column",gap:16,background:"var(--paper)"}}>
+        <div style={{color:"var(--red)",fontSize:28}}>♪</div>
+        <div style={{fontFamily:"Noto Serif JP,serif",fontSize:14,color:"rgba(28,10,12,.5)",letterSpacing:".12em"}}>読み込み中…</div>
+      </div>
+    </>
+  );
+
+  if (error) return (
+    <>
+      <style>{CSS}</style>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh",flexDirection:"column",gap:12,padding:24,background:"var(--paper)"}}>
+        <div style={{color:"var(--red)",fontSize:14,textAlign:"center",lineHeight:1.8}}>{error}</div>
+      </div>
+    </>
+  );
 
   return (
     <>
@@ -1035,7 +1804,6 @@ export default function App() {
               ))}
             </div>
             <Silhouette/>
-            <div className="hdr-sil"><div className="hdr-pitch"/></div>
           </div>
           <div className="hdr-body">
             <div className="hdr-sub">東方神起 - TVXQ! LIVE ARCHIVE</div>
@@ -1045,7 +1813,7 @@ export default function App() {
                 <div><div className="stat-n">{totalSongs}</div><div className="stat-l">SONGS</div></div>
                 <div><div className="stat-n">{allTours.length}</div><div className="stat-l">TOURS</div></div>
               </div>
-              <button className="add-btn" onClick={() => { setShowAdd(true); setSelected(null); }}>＋</button>
+              <button className="add-btn" onClick={() => { setShowMenu(true); setSelected(null); }}>＋</button>
             </div>
           </div>
         </div>
@@ -1053,11 +1821,40 @@ export default function App() {
           <div className="sec-lbl">ツアー</div>
           {allTours.map(tour => (
             <TourCard key={tour.id} tour={tour}
-              onLiveSelect={(live,tour) => { setSelected({live,tour}); setShowAdd(false); }}/>
+              onLiveSelect={(live, tour) => { setSelected({ live, tour }); setShowMenu(false); }}
+              onLiveDelete={handleLiveDelete}
+              onTourDelete={handleTourDelete}
+            />
           ))}
         </div>
-        {selected && <LiveModal live={selected.live} tour={selected.tour} onClose={() => setSelected(null)} onUpdate={handleUpdate}/>}
-        {showAdd   && <AddForm  onClose={() => setShowAdd(false)} onSave={handleSave} onSaveAndClose={handleSaveAndClose}/>}
+        {selected && (
+          <LiveModal
+            live={selected.live}
+            tour={selected.tour}
+            onClose={() => setSelected(null)}
+            onUpdate={handleUpdate}
+          />
+        )}
+        {showMenu && (
+          <AddMenu
+            onClose={() => setShowMenu(false)}
+            onSelectLive={() => { setShowMenu(false); setShowAdd(true); }}
+            onSelectTour={() => { setShowMenu(false); setShowAddTour(true); }}
+          />
+        )}
+        {showAdd && (
+          <AddForm
+            onClose={() => setShowAdd(false)}
+            onSaveAndClose={(selTour, newLive) => { handleSave(selTour, newLive); setShowAdd(false); }}
+            allTours={allTours}
+          />
+        )}
+        {showAddTour && (
+          <AddTourForm
+            onClose={() => setShowAddTour(false)}
+            onSaveTour={handleTourSave}
+          />
+        )}
       </div>
     </>
   );
