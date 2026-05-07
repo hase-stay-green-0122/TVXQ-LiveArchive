@@ -194,7 +194,6 @@ const TOURS = [
   {
     id: "tour-zone",
     name: "東方神起 20th Anniversary LIVE TOUR ～ZONE～",
-    sub:  "ZONE",
     color: "#1a4a6b",
     lives: [
       {
@@ -355,7 +354,7 @@ const CSS = `
     .content { grid-column:2; grid-row:1 / 3; padding:32px 40px 60px; max-width:760px; overflow-y:auto; }
     .sec-lbl { font-size:11px; margin-bottom:16px; }
     .tour-card { border-radius:18px; margin-bottom:16px; }
-    .tour-card-name { font-size:22px; }
+    .tour-card-name { font-size:13px; }
     .live-item { padding:14px 20px; }
     .live-item-venue { font-size:14px; }
     .overlay { position:fixed; }
@@ -399,7 +398,7 @@ const CSS = `
   .tour-card-hdr { display:flex; align-items:center; gap:12px; padding:12px 16px; cursor:pointer; }
   .tour-card-bar { width:3px; height:44px; border-radius:2px; flex-shrink:0; }
   .tour-card-info { flex:1; min-width:0; }
-  .tour-card-name { font-family:"Noto Serif JP",serif; font-size:22px; font-weight:300; color:#fff; line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; letter-spacing:.05em; }
+  .tour-card-name { font-family:"Noto Serif JP",serif; font-size:13px; font-weight:600; color:#fff; line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .tour-card-period { font-size:11px; color:var(--gold-lt); margin-top:3px; letter-spacing:.04em; }
   .tour-card-count { font-size:11px; color:rgba(255,255,255,.4); margin-top:2px; }
   .tour-card-arrow { font-size:18px; color:rgba(255,255,255,.3); transition:transform .2s; flex-shrink:0; }
@@ -551,9 +550,9 @@ const CSS = `
   .add-menu-desc { font-size:11px; color:rgba(28,10,12,.4); margin-top:2px; }
 
   /* カラープリセット */
-  .color-presets { display:grid; grid-template-columns:repeat(10,1fr); gap:8px; }
-  .color-preset { width:100%; aspect-ratio:1; border-radius:50%; cursor:pointer; border:3px solid transparent; transition:transform .15s, border-color .15s; }
-  .color-preset.selected { border-color:#fff; transform:scale(1.15); }
+  .color-presets { display:flex; gap:10px; flex-wrap:wrap; }
+  .color-preset { width:38px; height:38px; border-radius:50%; cursor:pointer; border:3px solid transparent; transition:transform .15s, border-color .15s; flex-shrink:0; }
+  .color-preset.selected { border-color:var(--ink); transform:scale(1.15); }
 
   /* ビジュアルタイプ選択 */
 
@@ -785,7 +784,7 @@ function TourCard({ tour, onLiveSelect, onLiveDelete, onTourDelete }) {
     if (tour.id === "tour-20th") return (
       <div className="tour-vis-wrap" onClick={() => setOpen(o=>!o)}>
         <div className="red-vis" style={{height:"100%"}}>
-          <div className="red-wm">{tour.sub && <span>{tour.sub}</span>}</div>
+          <div className="red-wm"><span>RED OCEAN</span></div>
           <div className="red-ocean-dots">
             {Array.from({length:60}).map((_,i) => (
               <div key={i} className="rod" style={{background:ROD[i%ROD.length],height:6+(i%5)*3,opacity:0.4+(i%4)*0.15,boxShadow:`0 0 3px ${ROD[i%ROD.length]}`}}/>
@@ -799,7 +798,7 @@ function TourCard({ tour, onLiveSelect, onLiveDelete, onTourDelete }) {
     if (tour.id === "tour-zone") return (
       <div className="tour-vis-wrap" onClick={() => setOpen(o=>!o)}>
         <div className="zone-vis" style={{height:"100%"}}>
-          <div className="zone-wm">{tour.sub && <span>{tour.sub}</span>}</div>
+          <div className="zone-wm"><span>ZONE</span></div>
           <svg className="zone-dots-svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
             <circle cx="50" cy="50" r="4" fill="rgba(180,220,255,0.9)"/>
             <circle cx="50" cy="50" r="8" fill="rgba(120,180,255,0.2)"/>
@@ -817,7 +816,8 @@ function TourCard({ tour, onLiveSelect, onLiveDelete, onTourDelete }) {
       <div className="tour-vis-wrap" onClick={() => setOpen(o=>!o)}>
         <img src={svgUrl} style={{width:"100%",height:"110px",display:"block",objectFit:"cover"}} alt=""/>
         <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",pointerEvents:"none",zIndex:3}}>
-          {tour.sub && <span style={{fontFamily:'"Noto Serif JP",serif',fontSize:"13px",fontWeight:300,letterSpacing:".15em",color:"rgba(255,255,255,.6)",textShadow:"0 1px 8px rgba(0,0,0,.6)"}}>{tour.sub}</span>}
+          <span style={{fontFamily:'"Noto Serif JP",serif',fontSize:"48px",fontWeight:300,letterSpacing:".2em",color:"rgba(255,255,255,.75)",whiteSpace:"nowrap",lineHeight:1.1,textShadow:"0 2px 16px rgba(0,0,0,.5)"}}>{tour.name}</span>
+          {tour.sub && <span style={{fontFamily:'"Noto Serif JP",serif',fontSize:"13px",fontWeight:300,letterSpacing:".15em",color:"rgba(255,255,255,.6)",marginTop:"6px",textShadow:"0 1px 8px rgba(0,0,0,.6)"}}>{tour.sub}</span>}
         </div>
       </div>
     );
@@ -1116,26 +1116,12 @@ function EditForm({ live, onClose, onGoHome, onUpdate }) {
 // ─────────────────────────────────────────────
 
 const TOUR_COLOR_PRESETS = [
-  { label:"クリムゾン",  value:"#c0152a" },
-  { label:"スカーレット", value:"#e8112d" },
-  { label:"バーガンディ", value:"#7a0d1c" },
-  { label:"コーラル",    value:"#d94f3a" },
-  { label:"ネイビー",    value:"#1a3a6b" },
-  { label:"ロイヤルブルー",value:"#1a4aaa" },
-  { label:"スカイ",      value:"#1a6aaa" },
-  { label:"ティール",    value:"#0a5a5a" },
-  { label:"エメラルド",  value:"#0a6a3a" },
-  { label:"フォレスト",  value:"#1a4a1a" },
-  { label:"パープル",    value:"#5a1a7a" },
-  { label:"バイオレット", value:"#3a1a8a" },
-  { label:"ラベンダー",  value:"#6a3a9a" },
-  { label:"ローズ",      value:"#8a1a5a" },
-  { label:"マゼンタ",    value:"#9a0a6a" },
-  { label:"ゴールド",    value:"#8a6a10" },
-  { label:"アンバー",    value:"#8a4a0a" },
-  { label:"ブラック",    value:"#1a1a1a" },
-  { label:"チャコール",  value:"#2a2a3a" },
-  { label:"スレート",    value:"#2a3a4a" },
+  { label:"レッド",    value:"#c0152a" },
+  { label:"ネイビー",  value:"#1a3a6b" },
+  { label:"パープル",  value:"#5a1a7a" },
+  { label:"ブラック",  value:"#1a1a1a" },
+  { label:"ゴールド",  value:"#8a6a10" },
+  { label:"ティール",  value:"#0a5a5a" },
 ];
 
 // ─────────────────────────────────────────────
