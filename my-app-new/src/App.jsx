@@ -1150,196 +1150,315 @@ const TOUR_COLOR_PRESETS = [
 ];
 
 // ─────────────────────────────────────────────
-//  ビジュアルパターン定義（10種）
+//  ビジュアルパターン定義（30種・ライブ特化）
 // ─────────────────────────────────────────────
 
 const VIS_PATTERNS = [
+  // ── ステージ・照明系 ──
   {
-    keys: ["波","海","ocean","wave","うねり","水面"],
-    label: "波", emoji: "🌊",
-    render: (color, name) => {
-      const c1 = darken(color,0.55), c2 = darken(color,0.25);
-      const cl = lighten(color,0.55);
-      const waves = [0,1,2,3].map(i => {
-        const y = 60+i*14, amp = 18-i*3, op = 0.55-i*0.1;
-        return `<path d="M-10 ${y} C40 ${y-amp} 90 ${y+amp} 140 ${y} S240 ${y-amp} 290 ${y} S390 ${y+amp} 420 ${y}" fill="none" stroke="${cl}" stroke-width="${3-i*0.5}" opacity="${op}" stroke-linecap="round"/>`;
-      }).join('');
-      const glow = `<ellipse cx="200" cy="110" rx="220" ry="50" fill="${cl}" opacity="0.08"/>`;
-      const foam = Array.from({length:12},(_,i)=>{
-        const x=(i*37+10)%400, y=45+(i*23)%35;
-        return `<circle cx="${x}" cy="${y}" r="${1+i%3}" fill="#fff" opacity="${0.08+i%4*0.04}"/>`;
-      }).join('');
-      return baseSvg(c1,c2,glow+waves+foam);
+    id:"spotlight", label:"スポットライト", emoji:"🔦", layer:"bg",
+    render:(color)=>{
+      const c1=darken(color,.6),c2=darken(color,.25),cl=lighten(color,.6);
+      const beams=Array.from({length:5},(_,i)=>{const x=60+i*70,w=30+i%2*20,op=(.05+i%3*.02).toFixed(2);return`<polygon points="${x},0 ${x+w},0 ${x+w*2},110 ${x-20},110" fill="${cl}" opacity="${op}"/>`;}).join('');
+      const src=`<ellipse cx="200" cy="-5" rx="260" ry="40" fill="${cl}" opacity="0.12"/>`;
+      const glow=`<ellipse cx="200" cy="30" rx="160" ry="25" fill="${cl}" opacity="0.07"/>`;
+      return baseSvg(c1,c2,src+beams+glow);
     }
   },
   {
-    keys: ["星","スター","star","night","夜空","銀河","galaxy"],
-    label: "星空", emoji: "✨",
-    render: (color, name) => {
-      const c1 = darken(color,0.6), c2 = darken(color,0.3);
-      const cl = lighten(color,0.6);
-      const stars = Array.from({length:45},(_,i)=>{
-        const x=(i*137.5+i*i*0.3)%398+1, y=(i*83.7+i*3)%105+2;
-        const r=i%7===0?2.8:i%3===0?1.8:1.0;
-        const op=(0.3+(i*31%55)/100).toFixed(2);
-        return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="#fff" opacity="${op}"/>`;
-      }).join('');
-      const moon = `<circle cx="340" cy="28" r="22" fill="${cl}" opacity="0.12"/><circle cx="340" cy="28" r="14" fill="${cl}" opacity="0.15"/><circle cx="340" cy="28" r="7" fill="#fff" opacity="0.4"/>`;
-      const glow = `<ellipse cx="340" cy="28" rx="60" ry="40" fill="${cl}" opacity="0.06"/>`;
-      return baseSvg(c1,c2,stars+glow+moon);
+    id:"laser", label:"レーザービーム", emoji:"⚡", layer:"bg",
+    render:(color)=>{
+      const c1=darken(color,.65),c2=darken(color,.3),cl=lighten(color,.7);
+      const lines=Array.from({length:10},(_,i)=>{const y1=i%2===0?0:110,y2=i%2===0?110:0,x1=(i*43)%400,x2=(x1+80+i*20)%400,op=(.12+i%4*.04).toFixed(2);return`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${cl}" stroke-width="${.8+i%3*.4}" opacity="${op}"/>`;}).join('');
+      const glow=`<ellipse cx="200" cy="55" rx="200" ry="55" fill="${cl}" opacity="0.04"/>`;
+      return baseSvg(c1,c2,glow+lines);
     }
   },
   {
-    keys: ["渦","spiral","螺旋","swirl","回転","vortex"],
-    label: "渦", emoji: "🌀",
-    render: (color, name) => {
-      const c1 = darken(color,0.55), c2 = darken(color,0.2);
-      const cl = lighten(color,0.65);
-      const spirals = [1,2,3].map(ring => {
-        const pts = Array.from({length:48},(_,i)=>{
-          const a=(i/48)*Math.PI*2*ring*1.5;
-          const d=6+i*(ring*0.9);
-          const x=200+Math.cos(a)*d, y=55+Math.sin(a)*d*0.5;
-          return `${x.toFixed(1)},${y.toFixed(1)}`;
-        }).join(' ');
-        return `<polyline points="${pts}" fill="none" stroke="${cl}" stroke-width="${1.2-ring*0.2}" opacity="${0.45-ring*0.08}"/>`;
-      }).join('');
-      const core = `<circle cx="200" cy="55" r="12" fill="${cl}" opacity="0.15"/><circle cx="200" cy="55" r="5" fill="${cl}" opacity="0.35"/><circle cx="200" cy="55" r="2" fill="#fff" opacity="0.7"/>`;
-      const glow = `<ellipse cx="200" cy="55" rx="80" ry="45" fill="${cl}" opacity="0.05"/>`;
-      return baseSvg(c1,c2,glow+spirals+core);
+    id:"stagefloor", label:"ステージフロア", emoji:"🎭", layer:"bg",
+    render:(color)=>{
+      const c1=darken(color,.55),c2=darken(color,.2),cl=lighten(color,.55);
+      const floor=`<rect x="0" y="85" width="400" height="25" fill="${cl}" opacity="0.08"/>`;
+      const lines=Array.from({length:8},(_,i)=>{const x=i*55,op=(.1+i%3*.04).toFixed(2);return`<line x1="${x}" y1="0" x2="${x+30}" y2="110" stroke="${cl}" stroke-width=".6" opacity="${op}"/>`;}).join('');
+      const reflect=Array.from({length:6},(_,i)=>{const x=30+i*60;return`<ellipse cx="${x}" cy="95" rx="${15+i%3*8}" ry="3" fill="${cl}" opacity="0.1"/>`;}).join('');
+      const glow=`<ellipse cx="200" cy="85" rx="220" ry="20" fill="${cl}" opacity="0.08"/>`;
+      return baseSvg(c1,c2,glow+lines+floor+reflect);
     }
   },
   {
-    keys: ["雨","rain","しずく","drop","rainfall"],
-    label: "雨", emoji: "🌧",
-    render: (color, name) => {
-      const c1 = darken(color,0.6), c2 = darken(color,0.3);
-      const cl = lighten(color,0.6);
-      const drops = Array.from({length:35},(_,i)=>{
-        const x=(i*23+i*i*0.5)%400, y=(i*31)%85;
-        const len=8+i%5*5, op=(0.2+(i*7%40)/100).toFixed(2);
-        return `<line x1="${x}" y1="${y}" x2="${x-5}" y2="${y+len}" stroke="${cl}" stroke-width="1.4" opacity="${op}" stroke-linecap="round"/>`;
-      }).join('');
-      const puddle = `<ellipse cx="200" cy="100" rx="160" ry="8" fill="${cl}" opacity="0.06"/>`;
-      const splash = Array.from({length:6},(_,i)=>{
-        const x=40+i*65, r=3+i%3*2;
-        return `<ellipse cx="${x}" cy="100" rx="${r}" ry="1.5" fill="${cl}" opacity="0.12"/>`;
-      }).join('');
-      return baseSvg(c1,c2,drops+puddle+splash);
+    id:"backlight", label:"バックライト", emoji:"🌅", layer:"bg",
+    render:(color)=>{
+      const c1=darken(color,.7),c2=darken(color,.35),cl=lighten(color,.65);
+      const halo=`<ellipse cx="200" cy="110" rx="180" ry="60" fill="${cl}" opacity="0.18"/>`;
+      const rays=Array.from({length:12},(_,i)=>{const a=(i/12)*Math.PI,x=200+Math.cos(a)*180,y=110-Math.sin(a)*100,op=(.06+i%4*.02).toFixed(2);return`<line x1="200" y1="110" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="${cl}" stroke-width="${1+i%3*.5}" opacity="${op}"/>`;}).join('');
+      const glow=`<ellipse cx="200" cy="110" rx="80" ry="30" fill="${cl}" opacity="0.2"/>`;
+      return baseSvg(c1,c2,rays+halo+glow);
     }
   },
   {
-    keys: ["炎","fire","flame","情熱","burn","熱"],
-    label: "炎", emoji: "🔥",
-    render: (color, name) => {
-      const c1 = darken(color,0.6), c2 = darken(color,0.2);
-      const cl = lighten(color,0.6);
-      const cl2 = lighten(color,0.85);
-      const flames = Array.from({length:12},(_,i)=>{
-        const x=15+i*33, h=30+(i%4)*22, w=12+(i%3)*8, op=(0.2+(i*11%35)/100).toFixed(2);
-        return `<path d="M${x} 112 C${x-w} ${112-h*0.4} ${x-w*0.5} ${112-h*0.75} ${x} ${112-h} C${x+w*0.5} ${112-h*0.75} ${x+w} ${112-h*0.4} ${x} 112" fill="${cl}" opacity="${op}"/>`;
-      }).join('');
-      const embers = Array.from({length:15},(_,i)=>{
-        const x=(i*57+20)%380, y=(i*43)%80;
-        return `<circle cx="${x}" cy="${y}" r="${0.8+i%3*0.6}" fill="${cl2}" opacity="${(0.15+i%5*0.07).toFixed(2)}"/>`;
-      }).join('');
-      const glow = `<ellipse cx="200" cy="112" rx="200" ry="30" fill="${cl}" opacity="0.1"/>`;
-      return baseSvg(c1,c2,glow+flames+embers);
+    id:"mirrorball", label:"ミラーボール", emoji:"🪩", layer:"fg",
+    render:(color)=>{
+      const c1=darken(color,.6),c2=darken(color,.25),cl=lighten(color,.7);
+      const dots=Array.from({length:60},(_,i)=>{const x=(i*137.5+i*i*.1)%398+1,y=(i*83.7+i*2)%105+2,r=i%5===0?2.5:i%3===0?1.5:.8,op=(.15+(i*31%60)/100).toFixed(2);return`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="#fff" opacity="${op}"/>`;}).join('');
+      const ball=`<circle cx="200" cy="18" r="14" fill="${cl}" opacity="0.2"/><circle cx="200" cy="18" r="9" fill="#fff" opacity="0.15"/>`;
+      const glow=`<ellipse cx="200" cy="18" rx="40" ry="20" fill="${cl}" opacity="0.08"/>`;
+      return baseSvg(c1,c2,glow+dots+ball);
+    }
+  },
+  // ── 音・音楽系 ──
+  {
+    id:"soundwave", label:"音波", emoji:"〰️", layer:"fg",
+    render:(color)=>{
+      const c1=darken(color,.55),c2=darken(color,.2),cl=lighten(color,.6);
+      const waves=[0,1,2,3].map(i=>{const y=40+i*18,amp=22-i*4,op=(.6-i*.1).toFixed(2);return`<path d="M0 ${y} C50 ${y-amp} 100 ${y+amp} 150 ${y} S250 ${y-amp} 300 ${y} S400 ${y+amp} 400 ${y}" fill="none" stroke="${cl}" stroke-width="${2.5-i*.4}" opacity="${op}" stroke-linecap="round"/>`;}).join('');
+      const glow=`<ellipse cx="200" cy="55" rx="220" ry="40" fill="${cl}" opacity="0.05"/>`;
+      return baseSvg(c1,c2,glow+waves);
     }
   },
   {
-    keys: ["格子","grid","幾何学","geometric","lattice","mesh"],
-    label: "格子", emoji: "⬛",
-    render: (color, name) => {
-      const c1 = darken(color,0.55), c2 = darken(color,0.2);
-      const cl = lighten(color,0.5);
-      const hlines = Array.from({length:7},(_,i)=>
-        `<line x1="0" y1="${i*18}" x2="400" y2="${i*18}" stroke="${cl}" stroke-width="0.7" opacity="0.22"/>`).join('');
-      const vlines = Array.from({length:17},(_,i)=>
-        `<line x1="${i*26}" y1="0" x2="${i*26}" y2="110" stroke="${cl}" stroke-width="0.7" opacity="0.22"/>`).join('');
-      const nodes = Array.from({length:35},(_,i)=>{
-        const x=(i%7)*65+10, y=Math.floor(i/7)*22+5;
-        const op=(0.15+(i*13%40)/100).toFixed(2);
-        return `<rect x="${x-2}" y="${y-2}" width="4" height="4" fill="${cl}" opacity="${op}" transform="rotate(45 ${x} ${y})"/>`;
-      }).join('');
-      const glow = `<ellipse cx="200" cy="55" rx="120" ry="40" fill="${cl}" opacity="0.05"/>`;
-      return baseSvg(c1,c2,glow+hlines+vlines+nodes);
+    id:"beat", label:"ビート", emoji:"🥁", layer:"fg",
+    render:(color)=>{
+      const c1=darken(color,.55),c2=darken(color,.2),cl=lighten(color,.6);
+      const bars=Array.from({length:22},(_,i)=>{const x=8+i*18,h=15+(Math.sin(i*.8)*25+Math.sin(i*1.3)*15+25),op=(.35+(i%4)*.1).toFixed(2);return`<rect x="${x}" y="${110-h}" width="10" height="${h}" rx="3" fill="${cl}" opacity="${op}"/>`;}).join('');
+      const glow=`<ellipse cx="200" cy="100" rx="200" ry="20" fill="${cl}" opacity="0.07"/>`;
+      return baseSvg(c1,c2,glow+bars);
     }
   },
   {
-    keys: ["爆発","burst","放射","radiation","explosion","エネルギー"],
-    label: "爆発", emoji: "💥",
-    render: (color, name) => {
-      const c1 = darken(color,0.6), c2 = darken(color,0.2);
-      const cl = lighten(color,0.7);
-      const rays = Array.from({length:24},(_,i)=>{
-        const angle=(i/24)*Math.PI*2;
-        const len=40+(i%4)*20;
-        const x1=200+Math.cos(angle)*12, y1=55+Math.sin(angle)*8;
-        const x2=200+Math.cos(angle)*len, y2=55+Math.sin(angle)*len*0.6;
-        const op=(0.15+(i*7%40)/100).toFixed(2);
-        return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${cl}" stroke-width="${2-i%3*0.4}" opacity="${op}" stroke-linecap="round"/>`;
-      }).join('');
-      const rings = [25,45,65].map((r,i)=>
-        `<circle cx="200" cy="55" r="${r}" fill="none" stroke="${cl}" stroke-width="0.8" opacity="${0.12-i*0.03}"/>`).join('');
-      const core = `<circle cx="200" cy="55" r="14" fill="${cl}" opacity="0.18"/><circle cx="200" cy="55" r="7" fill="${cl}" opacity="0.3"/><circle cx="200" cy="55" r="3" fill="#fff" opacity="0.75"/>`;
-      const glow = `<ellipse cx="200" cy="55" rx="100" ry="60" fill="${cl}" opacity="0.06"/>`;
-      return baseSvg(c1,c2,glow+rays+rings+core);
+    id:"echo", label:"エコー", emoji:"📡", layer:"fg",
+    render:(color)=>{
+      const c1=darken(color,.6),c2=darken(color,.25),cl=lighten(color,.65);
+      const rings=[20,38,56,74,92].map((r,i)=>`<ellipse cx="200" cy="55" rx="${r*2}" ry="${r}" fill="none" stroke="${cl}" stroke-width="${1.5-i*.2}" opacity="${(.45-i*.07).toFixed(2)}"/>`).join('');
+      const core=`<circle cx="200" cy="55" r="6" fill="${cl}" opacity="0.5"/><circle cx="200" cy="55" r="2.5" fill="#fff" opacity="0.8"/>`;
+      return baseSvg(c1,c2,rings+core);
     }
   },
   {
-    keys: ["粒子","particle","浮遊","float","bubble","泡"],
-    label: "粒子", emoji: "🫧",
-    render: (color, name) => {
-      const c1 = darken(color,0.58), c2 = darken(color,0.22);
-      const cl = lighten(color,0.65);
-      const bubbles = Array.from({length:28},(_,i)=>{
-        const x=(i*127.3+i*i*0.2)%395+2, y=(i*83.7)%105+2;
-        const r=1.5+(i%5)*1.2, op=(0.12+(i*17%50)/100).toFixed(2);
-        return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="none" stroke="${cl}" stroke-width="0.8" opacity="${op}"/><circle cx="${(x+r*0.3).toFixed(1)}" cy="${(y-r*0.3).toFixed(1)}" r="${(r*0.25).toFixed(1)}" fill="#fff" opacity="${(parseFloat(op)*0.6).toFixed(2)}"/>`;
-      }).join('');
-      const glow1=`<ellipse cx="130" cy="40" rx="60" ry="35" fill="${cl}" opacity="0.05"/>`;
-      const glow2=`<ellipse cx="280" cy="75" rx="50" ry="30" fill="${cl}" opacity="0.05"/>`;
-      return baseSvg(c1,c2,glow1+glow2+bubbles);
+    id:"record", label:"レコード", emoji:"💿", layer:"bg",
+    render:(color)=>{
+      const c1=darken(color,.6),c2=darken(color,.25),cl=lighten(color,.55);
+      const grooves=Array.from({length:10},(_,i)=>{const r=22+i*7;return`<circle cx="200" cy="55" r="${r}" fill="none" stroke="${cl}" stroke-width=".6" opacity="${(.18-i*.01).toFixed(2)}"/>`;}).join('');
+      const disc=`<circle cx="200" cy="55" r="18" fill="${cl}" opacity="0.12"/><circle cx="200" cy="55" r="6" fill="${cl}" opacity="0.3"/><circle cx="200" cy="55" r="2" fill="#fff" opacity="0.6"/>`;
+      const glow=`<ellipse cx="200" cy="55" rx="90" ry="55" fill="${cl}" opacity="0.06"/>`;
+      return baseSvg(c1,c2,glow+grooves+disc);
     }
   },
   {
-    keys: ["桜","花","bloom","flower","petal","spring","春"],
-    label: "桜", emoji: "🌸",
-    render: (color, name) => {
-      const c1 = darken(color,0.55), c2 = darken(color,0.2);
-      const cl = lighten(color,0.6);
-      const petals = Array.from({length:20},(_,i)=>{
-        const x=(i*113.7+15)%385, y=(i*67.3+8)%100;
-        const angle=(i*47)%360, size=4+(i%4)*2.5;
-        const op=(0.2+(i*13%45)/100).toFixed(2);
-        return `<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="${size}" ry="${(size*0.55).toFixed(1)}" fill="${cl}" opacity="${op}" transform="rotate(${angle} ${x.toFixed(1)} ${y.toFixed(1)})"/>`;
-      }).join('');
-      const branch = `<path d="M0 90 Q80 70 160 50 Q240 35 320 45 Q370 50 400 40" fill="none" stroke="${cl}" stroke-width="1.5" opacity="0.15"/>`;
-      const glow = `<ellipse cx="200" cy="55" rx="180" ry="50" fill="${cl}" opacity="0.04"/>`;
-      return baseSvg(c1,c2,glow+branch+petals);
+    id:"mic", label:"マイク", emoji:"🎤", layer:"fg",
+    render:(color)=>{
+      const c1=darken(color,.55),c2=darken(color,.2),cl=lighten(color,.65);
+      const waves=Array.from({length:5},(_,i)=>{const r=20+i*18,op=(.4-i*.06).toFixed(2);return`<path d="M${200-r} 55 Q${200} ${55-r*.4} ${200+r} 55" fill="none" stroke="${cl}" stroke-width="${2-i*.25}" opacity="${op}" stroke-linecap="round"/>`;}).join('');
+      const glow=`<ellipse cx="200" cy="45" rx="100" ry="40" fill="${cl}" opacity="0.06"/>`;
+      const center=`<circle cx="200" cy="55" r="8" fill="${cl}" opacity="0.3"/><circle cx="200" cy="55" r="3" fill="#fff" opacity="0.6"/>`;
+      return baseSvg(c1,c2,glow+waves+center);
+    }
+  },
+  // ── パフォーマンス系 ──
+  {
+    id:"shout", label:"シャウト", emoji:"📢", layer:"fg",
+    render:(color)=>{
+      const c1=darken(color,.6),c2=darken(color,.2),cl=lighten(color,.7);
+      const blasts=Array.from({length:16},(_,i)=>{const a=(i/16)*Math.PI*2,len=35+(i%4)*20,x1=200+Math.cos(a)*10,y1=55+Math.sin(a)*7,x2=200+Math.cos(a)*len,y2=55+Math.sin(a)*len*.6,op=(.2+(i%5)*.06).toFixed(2);return`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${cl}" stroke-width="${2.5-i%3*.5}" opacity="${op}" stroke-linecap="round"/>`;}).join('');
+      const core=`<circle cx="200" cy="55" r="10" fill="${cl}" opacity="0.2"/><circle cx="200" cy="55" r="4" fill="#fff" opacity="0.7"/>`;
+      const glow=`<ellipse cx="200" cy="55" rx="80" ry="50" fill="${cl}" opacity="0.07"/>`;
+      return baseSvg(c1,c2,glow+blasts+core);
     }
   },
   {
-    keys: ["光","光線","beam","ray","shine","輝き","glow"],
-    label: "光線", emoji: "✴️",
-    render: (color, name) => {
-      const c1 = darken(color,0.6), c2 = darken(color,0.25);
-      const cl = lighten(color,0.7);
-      const beams = Array.from({length:8},(_,i)=>{
-        const x=30+i*50, w=20+i%3*15, op=(0.06+i%4*0.02).toFixed(2);
-        return `<polygon points="${x},0 ${x+w},0 ${x+w+30},110 ${x-10},110" fill="${cl}" opacity="${op}"/>`;
-      }).join('');
-      const source = `<ellipse cx="200" cy="-10" rx="280" ry="50" fill="${cl}" opacity="0.1"/>`;
-      const rays = Array.from({length:5},(_,i)=>{
-        const x=80+i*60;
-        return `<line x1="${x}" y1="0" x2="${x+20}" y2="110" stroke="#fff" stroke-width="0.6" opacity="${0.06+i%3*0.02}"/>`;
-      }).join('');
-      const glow = `<ellipse cx="200" cy="20" rx="150" ry="30" fill="${cl}" opacity="0.08"/>`;
-      return baseSvg(c1,c2,source+beams+rays+glow);
+    id:"jump", label:"ジャンプ", emoji:"🦘", layer:"fg",
+    render:(color)=>{
+      const c1=darken(color,.55),c2=darken(color,.2),cl=lighten(color,.65);
+      const arcs=Array.from({length:6},(_,i)=>{const x=30+i*68,h=25+i%3*20,w=40+i%2*15,op=(.25+i%4*.07).toFixed(2);return`<path d="M${x} 95 Q${x+w/2} ${95-h} ${x+w} 95" fill="none" stroke="${cl}" stroke-width="${1.8-i%3*.3}" opacity="${op}" stroke-linecap="round"/>`;}).join('');
+      const ground=`<line x1="0" y1="97" x2="400" y2="97" stroke="${cl}" stroke-width=".8" opacity="0.15"/>`;
+      const glow=`<ellipse cx="200" cy="97" rx="200" ry="15" fill="${cl}" opacity="0.05"/>`;
+      return baseSvg(c1,c2,glow+ground+arcs);
+    }
+  },
+  {
+    id:"dance", label:"ダンス", emoji:"💃", layer:"fg",
+    render:(color)=>{
+      const c1=darken(color,.55),c2=darken(color,.2),cl=lighten(color,.65);
+      const ribbons=Array.from({length:4},(_,i)=>{const yOff=20+i*22,amp=18+i*6,op=(.45-i*.06).toFixed(2);const pts=Array.from({length:20},(_,j)=>{const x=j*22,y=yOff+Math.sin(j*.5+i)*amp;return`${x},${y.toFixed(1)}`;}).join(' ');return`<polyline points="${pts}" fill="none" stroke="${cl}" stroke-width="${2.2-i*.3}" opacity="${op}" stroke-linecap="round" stroke-linejoin="round"/>`;}).join('');
+      const glow=`<ellipse cx="200" cy="55" rx="200" ry="50" fill="${cl}" opacity="0.04"/>`;
+      return baseSvg(c1,c2,glow+ribbons);
+    }
+  },
+  {
+    id:"spin", label:"スピン", emoji:"🌀", layer:"fg",
+    render:(color)=>{
+      const c1=darken(color,.55),c2=darken(color,.2),cl=lighten(color,.65);
+      const spirals=[1,2,3].map(ring=>{const pts=Array.from({length:60},(_,i)=>{const a=(i/60)*Math.PI*2*ring*1.5,d=5+i*(ring*.85),x=200+Math.cos(a)*d,y=55+Math.sin(a)*d*.55;return`${x.toFixed(1)},${y.toFixed(1)}`;}).join(' ');return`<polyline points="${pts}" fill="none" stroke="${cl}" stroke-width="${1.4-ring*.2}" opacity="${(.5-ring*.1).toFixed(2)}"/>`;}).join('');
+      const core=`<circle cx="200" cy="55" r="5" fill="${cl}" opacity="0.4"/><circle cx="200" cy="55" r="2" fill="#fff" opacity="0.7"/>`;
+      return baseSvg(c1,c2,spirals+core);
+    }
+  },
+  {
+    id:"snap", label:"フィンガースナップ", emoji:"👌", layer:"fg",
+    render:(color)=>{
+      const c1=darken(color,.6),c2=darken(color,.25),cl=lighten(color,.7);
+      const sparks=Array.from({length:20},(_,i)=>{const x=(i*97.3+30)%360+20,y=(i*67.1)%90+10,a=(i*37)%360,len=4+i%5*3,op=(.2+(i%4)*.08).toFixed(2);return`<line x1="${x}" y1="${y}" x2="${(x+Math.cos(a*Math.PI/180)*len).toFixed(1)}" y2="${(y+Math.sin(a*Math.PI/180)*len).toFixed(1)}" stroke="${cl}" stroke-width="1.2" opacity="${op}" stroke-linecap="round"/>`;}).join('');
+      const glow=`<ellipse cx="200" cy="55" rx="180" ry="50" fill="${cl}" opacity="0.04"/>`;
+      return baseSvg(c1,c2,glow+sparks);
+    }
+  },
+  // ── 楽器系 ──
+  {
+    id:"guitar", label:"ギター弦", emoji:"🎸", layer:"fg",
+    render:(color)=>{
+      const c1=darken(color,.55),c2=darken(color,.2),cl=lighten(color,.6);
+      const strings=Array.from({length:6},(_,i)=>{const y=20+i*16,amp=8+i*3,op=(.5-i*.04).toFixed(2);return`<path d="M0 ${y} C80 ${y-amp} 160 ${y+amp} 240 ${y} S340 ${y-amp} 400 ${y}" fill="none" stroke="${cl}" stroke-width="${1.8-i*.2}" opacity="${op}"/>`;}).join('');
+      const glow=`<ellipse cx="200" cy="55" rx="200" ry="45" fill="${cl}" opacity="0.04"/>`;
+      return baseSvg(c1,c2,glow+strings);
+    }
+  },
+  {
+    id:"drum", label:"ドラム", emoji:"🥁", layer:"fg",
+    render:(color)=>{
+      const c1=darken(color,.6),c2=darken(color,.25),cl=lighten(color,.65);
+      const rings=[15,30,48,66,84].map((r,i)=>`<ellipse cx="200" cy="55" rx="${r*2.2}" ry="${r*.7}" fill="none" stroke="${cl}" stroke-width="${2-i*.25}" opacity="${(.5-i*.07).toFixed(2)}"/>`).join('');
+      const impact=`<circle cx="200" cy="55" r="8" fill="${cl}" opacity="0.25"/><circle cx="200" cy="55" r="3" fill="#fff" opacity="0.6"/>`;
+      const glow=`<ellipse cx="200" cy="55" rx="120" ry="40" fill="${cl}" opacity="0.06"/>`;
+      return baseSvg(c1,c2,glow+rings+impact);
+    }
+  },
+  {
+    id:"piano", label:"ピアノ鍵盤", emoji:"🎹", layer:"bg",
+    render:(color)=>{
+      const c1=darken(color,.6),c2=darken(color,.25),cl=lighten(color,.55);
+      const whites=Array.from({length:14},(_,i)=>`<rect x="${i*29+1}" y="55" width="27" height="50" rx="2" fill="${cl}" opacity="${(.12+(i%3)*.03).toFixed(2)}"/>`).join('');
+      const blacks=Array.from({length:10},(_,i)=>{const positions=[0,1,3,4,5,7,8,10,11,12];const x=positions[i]*29+18;return`<rect x="${x}" y="55" width="17" height="32" rx="2" fill="${cl}" opacity="${(.22+(i%3)*.04).toFixed(2)}"/>`;}).join('');
+      const glow=`<ellipse cx="200" cy="80" rx="200" ry="30" fill="${cl}" opacity="0.05"/>`;
+      return baseSvg(c1,c2,glow+whites+blacks);
+    }
+  },
+  {
+    id:"bass", label:"ベースライン", emoji:"🎵", layer:"fg",
+    render:(color)=>{
+      const c1=darken(color,.55),c2=darken(color,.15),cl=lighten(color,.6);
+      const waves=[0,1].map(i=>{const y=60+i*20,amp=30-i*8,op=(.55-i*.15).toFixed(2);return`<path d="M-20 ${y} C60 ${y-amp} 120 ${y+amp} 200 ${y} S320 ${y-amp} 420 ${y}" fill="none" stroke="${cl}" stroke-width="${3.5-i*.8}" opacity="${op}" stroke-linecap="round"/>`;}).join('');
+      const glow=`<ellipse cx="200" cy="65" rx="220" ry="35" fill="${cl}" opacity="0.07"/>`;
+      return baseSvg(c1,c2,glow+waves);
+    }
+  },
+  {
+    id:"synth", label:"シンセサイザー", emoji:"🎛️", layer:"bg",
+    render:(color)=>{
+      const c1=darken(color,.65),c2=darken(color,.3),cl=lighten(color,.6);
+      const hlines=Array.from({length:8},(_,i)=>`<line x1="0" y1="${i*15}" x2="400" y2="${i*15}" stroke="${cl}" stroke-width=".5" opacity="0.18"/>`).join('');
+      const vlines=Array.from({length:20},(_,i)=>`<line x1="${i*21}" y1="0" x2="${i*21}" y2="110" stroke="${cl}" stroke-width=".5" opacity="0.18"/>`).join('');
+      const pulses=Array.from({length:8},(_,i)=>{const x=20+i*50,h=10+i%4*15,op=(.2+i%3*.07).toFixed(2);return`<rect x="${x}" y="${55-h/2}" width="8" height="${h}" fill="${cl}" opacity="${op}" rx="1"/>`;}).join('');
+      const glow=`<ellipse cx="200" cy="55" rx="150" ry="40" fill="${cl}" opacity="0.05"/>`;
+      return baseSvg(c1,c2,glow+hlines+vlines+pulses);
+    }
+  },
+  // ── 観客・一体感系 ──
+  {
+    id:"penlight", label:"ペンライト", emoji:"🕯️", layer:"fg",
+    render:(color)=>{
+      const c1=darken(color,.65),c2=darken(color,.3),cl=lighten(color,.7);
+      const lights=Array.from({length:30},(_,i)=>{const x=(i*43.7+10)%390+5,y=40+(i*29.3)%55,r=1.5+i%4*.8,op=(.2+(i*17%55)/100).toFixed(2);return`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="${cl}" opacity="${op}"/><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(r*2.5).toFixed(1)}" fill="${cl}" opacity="${(parseFloat(op)*.3).toFixed(2)}"/>`;}).join('');
+      const glow=`<ellipse cx="200" cy="55" rx="200" ry="55" fill="${cl}" opacity="0.04"/>`;
+      return baseSvg(c1,c2,glow+lights);
+    }
+  },
+  {
+    id:"redocean", label:"RED OCEAN", emoji:"🌊", layer:"bg",
+    render:(color)=>{
+      const c1=darken(color,.65),c2=darken(color,.3),cl=lighten(color,.55);
+      const waves=[0,1,2,3].map(i=>{const y=50+i*16,amp=16-i*3,op=(.6-i*.1).toFixed(2);return`<path d="M-10 ${y} C40 ${y-amp} 90 ${y+amp} 140 ${y} S240 ${y-amp} 290 ${y} S390 ${y+amp} 420 ${y}" fill="${cl}" opacity="${(.08-i*.015).toFixed(3)}"/><path d="M-10 ${y} C40 ${y-amp} 90 ${y+amp} 140 ${y} S240 ${y-amp} 290 ${y} S390 ${y+amp} 420 ${y}" fill="none" stroke="${cl}" stroke-width="${2-i*.3}" opacity="${op}"/>`;}).join('');
+      const glow=`<ellipse cx="200" cy="90" rx="220" ry="30" fill="${cl}" opacity="0.1"/>`;
+      return baseSvg(c1,c2,glow+waves);
+    }
+  },
+  {
+    id:"callresponse", label:"コール＆レスポンス", emoji:"📣", layer:"fg",
+    render:(color)=>{
+      const c1=darken(color,.6),c2=darken(color,.25),cl=lighten(color,.65);
+      const left=[20,40,60].map((r,i)=>`<path d="M10 55 Q${10+r} ${55-r*.5} ${10+r*2} 55" fill="none" stroke="${cl}" stroke-width="${2-i*.3}" opacity="${(.5-i*.1).toFixed(2)}" stroke-linecap="round"/>`).join('');
+      const right=[20,40,60].map((r,i)=>`<path d="M390 55 Q${390-r} ${55-r*.5} ${390-r*2} 55" fill="none" stroke="${cl}" stroke-width="${2-i*.3}" opacity="${(.5-i*.1).toFixed(2)}" stroke-linecap="round"/>`).join('');
+      const center=`<circle cx="200" cy="55" r="5" fill="${cl}" opacity="0.4"/><circle cx="200" cy="55" r="2" fill="#fff" opacity="0.7"/>`;
+      const glow=`<ellipse cx="200" cy="55" rx="180" ry="45" fill="${cl}" opacity="0.04"/>`;
+      return baseSvg(c1,c2,glow+left+right+center);
+    }
+  },
+  {
+    id:"circlepit", label:"サークルピット", emoji:"🔄", layer:"fg",
+    render:(color)=>{
+      const c1=darken(color,.55),c2=darken(color,.2),cl=lighten(color,.65);
+      const arcs=Array.from({length:3},(_,i)=>{const r=25+i*20,dash=`${8+i*4},${4+i*2}`;return`<circle cx="200" cy="55" r="${r}" fill="none" stroke="${cl}" stroke-width="${2-i*.3}" opacity="${(.5-i*.1).toFixed(2)}" stroke-dasharray="${dash}"/>`;}).join('');
+      const arrows=Array.from({length:8},(_,i)=>{const a=(i/8)*Math.PI*2,r=45,x=200+Math.cos(a)*r,y=55+Math.sin(a)*r*.6,ax=200+Math.cos(a+.3)*r,ay=55+Math.sin(a+.3)*r*.6,op=(.2+i%3*.06).toFixed(2);return`<line x1="${x.toFixed(1)}" y1="${y.toFixed(1)}" x2="${ax.toFixed(1)}" y2="${ay.toFixed(1)}" stroke="${cl}" stroke-width="1.5" opacity="${op}" stroke-linecap="round"/>`;}).join('');
+      return baseSvg(c1,c2,arcs+arrows);
+    }
+  },
+  {
+    id:"towel", label:"タオル回し", emoji:"🏳️", layer:"fg",
+    render:(color)=>{
+      const c1=darken(color,.55),c2=darken(color,.2),cl=lighten(color,.65);
+      const trails=Array.from({length:5},(_,i)=>{const yBase=25+i*18,pts=Array.from({length:16},(_,j)=>{const x=j*27,y=yBase+Math.sin(j*.6+i*1.2)*15;return`${x},${y.toFixed(1)}`;}).join(' ');const op=(.45-i*.06).toFixed(2);return`<polyline points="${pts}" fill="none" stroke="${cl}" stroke-width="${2.2-i*.3}" opacity="${op}" stroke-linecap="round" stroke-linejoin="round"/>`;}).join('');
+      const glow=`<ellipse cx="200" cy="55" rx="200" ry="45" fill="${cl}" opacity="0.04"/>`;
+      return baseSvg(c1,c2,glow+trails);
+    }
+  },
+  // ── 感情・雰囲気系 ──
+  {
+    id:"goosebumps", label:"鳥肌", emoji:"✨", layer:"fg",
+    render:(color)=>{
+      const c1=darken(color,.6),c2=darken(color,.25),cl=lighten(color,.7);
+      const particles=Array.from({length:55},(_,i)=>{const x=(i*97.3+i*.5)%396+2,y=(i*67.1+i*.3)%106+2,r=.6+i%4*.5,op=(.1+(i*23%60)/100).toFixed(2);return`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="${cl}" opacity="${op}"/>`;}).join('');
+      const glow=`<ellipse cx="200" cy="55" rx="200" ry="55" fill="${cl}" opacity="0.04"/>`;
+      return baseSvg(c1,c2,glow+particles);
+    }
+  },
+  {
+    id:"tears", label:"涙", emoji:"💧", layer:"fg",
+    render:(color)=>{
+      const c1=darken(color,.6),c2=darken(color,.3),cl=lighten(color,.65);
+      const drops=Array.from({length:14},(_,i)=>{const x=(i*71.3+15)%380+10,y=(i*53.7)%70+5,op=(.2+(i%5)*.06).toFixed(2);return`<ellipse cx="${x.toFixed(1)}" cy="${(y+8).toFixed(1)}" rx="3.5" ry="5" fill="${cl}" opacity="${op}"/><ellipse cx="${x.toFixed(1)}" cy="${(y+15).toFixed(1)}" rx="${4+i%3}" ry="1.5" fill="${cl}" opacity="${(parseFloat(op)*.4).toFixed(2)}"/>`;}).join('');
+      const glow=`<ellipse cx="200" cy="55" rx="200" ry="50" fill="${cl}" opacity="0.04"/>`;
+      return baseSvg(c1,c2,glow+drops);
+    }
+  },
+  {
+    id:"scream", label:"叫び", emoji:"😱", layer:"fg",
+    render:(color)=>{
+      const c1=darken(color,.6),c2=darken(color,.2),cl=lighten(color,.7);
+      const rings=[8,20,35,52,70,88].map((r,i)=>`<ellipse cx="200" cy="55" rx="${r*2.8}" ry="${r}" fill="none" stroke="${cl}" stroke-width="${2.2-i*.25}" opacity="${(.55-i*.07).toFixed(2)}"/>`).join('');
+      const core=`<circle cx="200" cy="55" r="7" fill="${cl}" opacity="0.3"/><circle cx="200" cy="55" r="3" fill="#fff" opacity="0.7"/>`;
+      const glow=`<ellipse cx="200" cy="55" rx="120" ry="55" fill="${cl}" opacity="0.06"/>`;
+      return baseSvg(c1,c2,glow+rings+core);
+    }
+  },
+  {
+    id:"afterglow", label:"余韻", emoji:"🌙", layer:"bg",
+    render:(color)=>{
+      const c1=darken(color,.7),c2=darken(color,.4),cl=lighten(color,.6);
+      const bands=Array.from({length:6},(_,i)=>{const y=i*20,op=(.12-i*.015).toFixed(3);return`<rect x="0" y="${y}" width="400" height="22" fill="${cl}" opacity="${op}"/>`;}).join('');
+      const shine=`<ellipse cx="200" cy="0" rx="200" ry="35" fill="${cl}" opacity="0.12"/>`;
+      const glow=`<ellipse cx="200" cy="55" rx="180" ry="50" fill="${cl}" opacity="0.05"/>`;
+      return baseSvg(c1,c2,shine+bands+glow);
+    }
+  },
+  {
+    id:"emotion", label:"感動", emoji:"💫", layer:"bg",
+    render:(color)=>{
+      const c1=darken(color,.6),c2=darken(color,.25),cl=lighten(color,.65);
+      const aurora=Array.from({length:5},(_,i)=>{const y=10+i*20,op=(.1-i*.015).toFixed(3),h=25-i*3;return`<path d="M0 ${y} Q100 ${y-h} 200 ${y} T400 ${y}" fill="${cl}" opacity="${op}"/>`;}).join('');
+      const rays=Array.from({length:10},(_,i)=>{const a=(i/10)*Math.PI*2,x=200+Math.cos(a)*150,y=55+Math.sin(a)*80,op=(.06+i%3*.02).toFixed(2);return`<line x1="200" y1="55" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="${cl}" stroke-width=".8" opacity="${op}"/>`;}).join('');
+      const glow=`<ellipse cx="200" cy="55" rx="100" ry="55" fill="${cl}" opacity="0.08"/>`;
+      return baseSvg(c1,c2,aurora+rays+glow);
+    }
+  },
+  {
+    id:"fireworks", label:"花火", emoji:"🎆", layer:"fg",
+    render:(color)=>{
+      const c1=darken(color,.6),c2=darken(color,.25),cl=lighten(color,.7);
+      const bursts=[[100,30],[200,20],[310,35]].map(([cx,cy],bi)=>{const rays=Array.from({length:16},(_,i)=>{const a=(i/16)*Math.PI*2,len=20+i%4*10,x2=cx+Math.cos(a)*len,y2=cy+Math.sin(a)*len,op=(.2+bi*.08+i%3*.04).toFixed(2);return`<line x1="${cx}" y1="${cy}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${cl}" stroke-width="${1.2-bi*.1}" opacity="${op}" stroke-linecap="round"/>`;}).join('');const glow=`<circle cx="${cx}" cy="${cy}" r="6" fill="${cl}" opacity="${.15+bi*.05}"/>`;return rays+glow;}).join('');
+      const bg=`<ellipse cx="200" cy="30" rx="200" ry="40" fill="${cl}" opacity="0.03"/>`;
+      return baseSvg(c1,c2,bg+bursts);
     }
   },
 ];
+
 
 // ユーティリティ
 function darken(hex, amt) {
@@ -1362,13 +1481,28 @@ function baseSvg(c1, c2, content) {
 // 既存svgCodeに含まれるテキスト要素を除去（旧データ互換）
 const stripSvgText = (svg) => svg ? svg.replace(/<text[\s\S]*?<\/text>/gi, '') : svg;
 
-// キーワード解析して即時SVG生成（API不要）
-function generateTourVisualSync(tourName, color, userPrompt) {
-  const text = (userPrompt || tourName || "").toLowerCase();
-  // キーワードマッチング（複数マッチは最初を優先）
-  const matched = VIS_PATTERNS.find(p => p.keys.some(k => text.includes(k)));
-  const pattern = matched || VIS_PATTERNS[7]; // デフォルト：粒子
-  return pattern.render(color, tourName);
+// 2パターンのSVGコンテンツを合成（背景を先に描画、前景を上に重ねる）
+function combineTwoPatterns(p1, p2, color) {
+  const c1 = darken(color, .6), c2 = darken(color, .25);
+  const grad = `<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${c1}"/><stop offset="100%" stop-color="${c2}"/></linearGradient><radialGradient id="vglow" cx="50%" cy="50%" r="60%"><stop offset="0%" stop-color="${c2}" stop-opacity="0.3"/><stop offset="100%" stop-color="${c1}" stop-opacity="0"/></radialGradient></defs><rect width="400" height="110" fill="url(#bg)"/><rect width="400" height="110" fill="url(#vglow)"/>`;
+  // 各パターンのSVGからコンテンツ部分だけ抽出して合成
+  const extract = (svg) => {
+    const m = svg.match(/<svg[^>]*>([\s\S]*)<\/svg>/);
+    if (!m) return '';
+    // defs と rect（背景）を除いた純粋なコンテンツのみ抽出
+    return m[1].replace(/<defs>[\s\S]*?<\/defs>/g,'').replace(/<rect[^/]*(fill="url\(#bg\)"|fill="url\(#vglow\)")[^/]*\/>/g,'');
+  };
+  const svg1 = p1.render(color);
+  const svg2 = p2.render(color);
+  const content = `<g opacity="0.85">${extract(svg1)}</g><g opacity="0.75">${extract(svg2)}</g>`;
+  return `<svg viewBox="0 0 400 110" width="100%" height="110" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">${grad}${content}</svg>`;
+}
+
+function generateTourVisual(pat1id, pat2id, color) {
+  const p1 = VIS_PATTERNS.find(p => p.id === pat1id) || VIS_PATTERNS[0];
+  const p2 = VIS_PATTERNS.find(p => p.id === pat2id);
+  if (!p2 || p1.id === p2.id) return p1.render(color);
+  return combineTwoPatterns(p1, p2, color);
 }
 
 function TourVisPreviewDialog({ tourName, tourSub, svgCode, onRetry, onConfirm }) {
@@ -1394,27 +1528,25 @@ function TourVisPreviewDialog({ tourName, tourSub, svgCode, onRetry, onConfirm }
 }
 
 function AddTourForm({ onClose, onSaveTour }) {
-  const [tourName,   setTourName]   = useState("");
-  const [tourSub,    setTourSub]    = useState("");
-  const [color,      setColor]      = useState("#c0152a");
-  const [userPrompt, setUserPrompt] = useState("");
-  const [preview,    setPreview]    = useState(false);
-  const [svgCode,    setSvgCode]    = useState(null);
-  const [state,      setState]      = useState("idle");
+  const [tourName, setTourName] = useState("");
+  const [tourSub,  setTourSub]  = useState("");
+  const [color,    setColor]    = useState("#c0152a");
+  const [pat1,     setPat1]     = useState(null); // 1つ目のパターンid
+  const [pat2,     setPat2]     = useState(null); // 2つ目のパターンid（任意）
+  const [preview,  setPreview]  = useState(false);
+  const [svgCode,  setSvgCode]  = useState(null);
+  const [state,    setState]    = useState("idle");
 
   const handleGenerate = () => {
-    const svg = generateTourVisualSync(tourName, color, userPrompt);
+    if (!pat1) { alert("パターンを1つ以上選んでください"); return; }
+    const svg = generateTourVisual(pat1, pat2, color);
     setSvgCode(svg);
     setPreview(true);
   };
 
-  // 別パターン：マッチしなかった他のパターンをランダムに試す
   const handleRetry = () => {
-    const text = (userPrompt || tourName || "").toLowerCase();
-    const matched = VIS_PATTERNS.findIndex(p => p.keys.some(k => text.includes(k)));
-    const others = VIS_PATTERNS.filter((_, i) => i !== matched);
-    const pick = others[Math.floor(Math.random() * others.length)];
-    setSvgCode(pick.render(color, tourName));
+    const svg = generateTourVisual(pat1, pat2, color);
+    setSvgCode(svg);
   };
 
   const handleConfirm = () => {
@@ -1429,6 +1561,21 @@ function AddTourForm({ onClose, onSaveTour }) {
       svgCode:   svgCode,
     });
     setTimeout(() => { setState("done"); setTimeout(onClose, 600); }, 400);
+  };
+
+  const togglePat = (id) => {
+    if (pat1 === id) { setPat1(pat2); setPat2(null); return; }
+    if (pat2 === id) { setPat2(null); return; }
+    if (!pat1) { setPat1(id); return; }
+    if (!pat2) { setPat2(id); return; }
+    // 2つ選択済みの場合は古い方を置き換え
+    setPat1(pat2); setPat2(id);
+  };
+
+  const getPatLabel = (id) => {
+    if (!id) return null;
+    const p = VIS_PATTERNS.find(x => x.id === id);
+    return p ? `${p.emoji} ${p.label}` : null;
   };
 
   return (
@@ -1470,24 +1617,41 @@ function AddTourForm({ onClose, onSaveTour }) {
             </div>
           </div>
 
-          <div className="fdivider">ビジュアルイメージ</div>
-          <div className="fsec">
-            <label className="flbl" style={{marginBottom:8}}>
-              イメージを自由に記述してください
-            </label>
-            <div style={{fontSize:11,color:"rgba(28,10,12,.38)",marginBottom:10,lineHeight:1.7}}>
-              波・星・渦・雨・炎・格子・爆発・粒子・桜・光… などのキーワードを含めると、そのパターンが適用されます。複数のキーワードも使えます。
+          <div className="fdivider">ビジュアルパターン（最大2つ選択）</div>
+          <div style={{padding:"0 20px 8px"}}>
+            <div style={{fontSize:11,color:"rgba(28,10,12,.4)",marginBottom:10,lineHeight:1.6}}>
+              タップして選択。2つ選ぶと合成されます。
             </div>
-            <textarea className="finp" rows={3} style={{resize:"none",lineHeight:1.8}}
-              placeholder={"例：夜の海に波が広がるような幻想的な雰囲気\n例：無数の星が輝く銀河をイメージ\n例：爆発するエネルギーと光の放射"}
-              value={userPrompt} onChange={e=>setUserPrompt(e.target.value)}/>
+            {/* 選択中バッジ */}
+            <div style={{display:"flex",gap:8,marginBottom:12,minHeight:28}}>
+              {pat1 && <div style={{background:"var(--red)",color:"#fff",fontSize:11,padding:"3px 10px",borderRadius:12}}>{getPatLabel(pat1)}</div>}
+              {pat2 && <div style={{background:"var(--red-deep)",color:"#fff",fontSize:11,padding:"3px 10px",borderRadius:12}}>{getPatLabel(pat2)}</div>}
+              {!pat1 && <div style={{color:"rgba(28,10,12,.28)",fontSize:11,paddingTop:4}}>まだ選択されていません</div>}
+            </div>
+            {/* パターングリッド */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:8}}>
+              {VIS_PATTERNS.map(p => {
+                const sel1 = pat1 === p.id, sel2 = pat2 === p.id;
+                const sel = sel1 || sel2;
+                return (
+                  <div key={p.id}
+                    onClick={() => togglePat(p.id)}
+                    style={{
+                      background: sel ? (sel1 ? "var(--red)" : "var(--red-deep)") : "var(--offwhite)",
+                      border: sel ? "2px solid rgba(255,255,255,.4)" : "1.5px solid rgba(192,21,42,.12)",
+                      borderRadius:10, padding:"8px 4px", textAlign:"center", cursor:"pointer",
+                      transition:"background .15s",
+                    }}>
+                    <div style={{fontSize:20}}>{p.emoji}</div>
+                    <div style={{fontSize:9,marginTop:3,color:sel?"#fff":"rgba(28,10,12,.55)",lineHeight:1.2,letterSpacing:".03em"}}>{p.label}</div>
+                    {sel && <div style={{fontSize:9,color:"rgba(255,255,255,.7)",marginTop:2}}>{sel1?"①":"②"}</div>}
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
-          <div style={{padding:"0 20px 8px",fontSize:11,color:"rgba(28,10,12,.35)",lineHeight:1.7}}>
-            💡 記述なしでもツアー名からパターンを自動選択します
-          </div>
-
-          <button className="save-btn" style={{marginBottom:24}} onClick={handleGenerate}>
+          <button className="save-btn" style={{marginBottom:24,marginTop:8}} onClick={handleGenerate}>
             ✨ プレビューを生成する
           </button>
         </div>
