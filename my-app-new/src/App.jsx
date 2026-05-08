@@ -395,17 +395,12 @@ const CSS = `
   .tour-card { background:var(--ink); border-radius:14px; margin-bottom:12px; overflow:hidden; box-shadow:0 2px 10px var(--shadow); border:1px solid rgba(192,21,42,.2); }
   .tour-vis-wrap { height:160px; cursor:pointer; position:relative; display:block; width:100%; overflow:hidden; }
   .tour-vis-wrap > svg { width:100% !important; height:160px !important; display:block; }
-  .tour-vis-wrap > div:not(.tour-vis-footer) { width:100%; height:100%; position:absolute; top:0; left:0; }
+  .tour-card .tour-vis-wrap > div:not(.tour-vis-footer) { width:100%; height:100%; position:absolute; top:0; left:0; }
   .tour-vis-footer { position:absolute; bottom:0; left:0; right:0; z-index:20; display:flex; align-items:flex-end; justify-content:center; padding:8px 12px 9px; background:linear-gradient(0deg,rgba(0,0,0,.65) 0%,transparent 100%); pointer-events:none; }
   .tour-vis-footer-info { display:flex; flex-direction:column; gap:2px; align-items:center; }
   .tour-vis-sub { font-size:10px; color:var(--gold-lt); letter-spacing:.08em; white-space:nowrap; text-align:center; }
   .tour-vis-period { font-size:11px; color:#fff; letter-spacing:.06em; white-space:nowrap; text-align:center; }
   .tour-vis-actions { position:absolute; bottom:9px; right:12px; display:flex; align-items:center; gap:6px; pointer-events:all; }
-  .tour-card-hdr { display:flex; align-items:center; gap:12px; padding:12px 16px; cursor:pointer; }
-  .tour-card-bar { width:3px; height:44px; border-radius:2px; flex-shrink:0; }
-  .tour-card-info { flex:1; min-width:0; }
-  .tour-card-name { font-family:"Noto Serif JP",serif; font-size:11px; font-weight:400; color:rgba(255,255,255,.5); line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; letter-spacing:.05em; }
-  .tour-card-count { font-size:11px; color:var(--gold-lt); margin-top:3px; letter-spacing:.04em; }
   .tour-card-arrow { font-size:18px; color:rgba(255,255,255,.6); transition:transform .2s; flex-shrink:0; }
   .tour-card-arrow.open { transform:rotate(90deg); }
 
@@ -1358,11 +1353,6 @@ function lighten(hex, amt) {
 function baseSvg(c1, c2, content) {
   const grad = `<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${c1}"/><stop offset="100%" stop-color="${c2}"/></linearGradient><radialGradient id="vglow" cx="50%" cy="50%" r="60%"><stop offset="0%" stop-color="${c2}" stop-opacity="0.3"/><stop offset="100%" stop-color="${c1}" stop-opacity="0"/></radialGradient></defs><rect width="400" height="110" fill="url(#bg)"/><rect width="400" height="110" fill="url(#vglow)"/>`;
   return `<svg viewBox="0 0 400 110" width="100%" height="110" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">${grad}${content}</svg>`;
-}
-function glowText(name, cl) {
-  const display = name || "NEW TOUR";
-  const fontSize = display.length > 20 ? 15 : display.length > 12 ? 19 : 24;
-  return `<text x="200" y="63" text-anchor="middle" dominant-baseline="middle" font-family="Noto Serif JP,serif" font-size="${fontSize}" fill="${cl}" opacity="0.12" letter-spacing="4">${display}</text><text x="200" y="63" text-anchor="middle" dominant-baseline="middle" font-family="Noto Serif JP,serif" font-size="${fontSize}" fill="#fff" opacity="0.9" letter-spacing="4" font-weight="300">${display}</text>`;
 }
 
 // 既存svgCodeに含まれるテキスト要素を除去（旧データ互換）
