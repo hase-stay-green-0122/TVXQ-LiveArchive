@@ -393,11 +393,11 @@ const CSS = `
 
   /* Tour card */
   .tour-card { background:var(--ink); border-radius:14px; margin-bottom:12px; overflow:hidden; box-shadow:0 2px 10px var(--shadow); border:1px solid rgba(192,21,42,.2); }
-  .tour-vis-wrap { height:110px; overflow:hidden; cursor:pointer; position:relative; flex-shrink:0; display:block; width:100%; }
-  .tour-vis-wrap > svg, .tour-vis-wrap svg { width:100% !important; height:110px !important; display:block; }
-  .tour-vis-wrap > div { width:100%; height:110px; }
-  .tour-vis-footer { position:absolute; bottom:0; left:0; right:0; z-index:10; display:flex; align-items:flex-end; justify-content:space-between; padding:8px 12px 9px; background:linear-gradient(0deg,rgba(0,0,0,.55) 0%,transparent 100%); pointer-events:none; }
-  .tour-vis-footer-info { display:flex; flex-direction:column; gap:2px; min-width:0; }
+  .tour-vis-wrap { height:110px; cursor:pointer; position:relative; display:block; width:100%; overflow:hidden; }
+  .tour-vis-wrap > svg { width:100% !important; height:110px !important; display:block; }
+  .tour-vis-wrap > div:not(.tour-vis-footer) { width:100%; height:100%; position:absolute; top:0; left:0; }
+  .tour-vis-footer { position:absolute; bottom:0; left:0; right:0; z-index:20; display:flex; align-items:flex-end; justify-content:space-between; padding:8px 12px 9px; background:linear-gradient(0deg,rgba(0,0,0,.65) 0%,transparent 100%); pointer-events:none; }
+  .tour-vis-footer-info { display:flex; flex-direction:column; gap:2px; min-width:0; flex:1; }
   .tour-vis-sub { font-size:10px; color:var(--gold-lt); letter-spacing:.08em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .tour-vis-period { font-size:11px; color:#fff; letter-spacing:.06em; white-space:nowrap; }
   .tour-vis-actions { display:flex; align-items:center; gap:6px; pointer-events:all; flex-shrink:0; }
@@ -786,6 +786,7 @@ function TourCard({ tour, onLiveSelect, onLiveDelete, onTourDelete }) {
   // 統一ビジュアル（110px固定）
   const renderVis = () => {
     // ビジュアル内共通フッター（サブタイトル・期間・削除・開閉）
+    // tour-vis-wrap直下に置くことでposition:absoluteが確実に効く
     const visFooter = (
       <div className="tour-vis-footer">
         <div className="tour-vis-footer-info">
@@ -804,7 +805,7 @@ function TourCard({ tour, onLiveSelect, onLiveDelete, onTourDelete }) {
 
     if (tour.id === "tour-20th") return (
       <div className="tour-vis-wrap" onClick={() => setOpen(o=>!o)}>
-        <div className="red-vis" style={{height:"100%"}}>
+        <div className="red-vis" style={{height:"100%",position:"relative"}}>
           <div className="red-wm"><span>{tour.name}</span></div>
           <div className="red-ocean-dots">
             {Array.from({length:60}).map((_,i) => (
@@ -819,7 +820,7 @@ function TourCard({ tour, onLiveSelect, onLiveDelete, onTourDelete }) {
     );
     if (tour.id === "tour-zone") return (
       <div className="tour-vis-wrap" onClick={() => setOpen(o=>!o)}>
-        <div className="zone-vis" style={{height:"100%"}}>
+        <div className="zone-vis" style={{height:"100%",position:"relative"}}>
           <div className="zone-wm"><span>{tour.name}</span></div>
           <svg className="zone-dots-svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
             <circle cx="50" cy="50" r="4" fill="rgba(180,220,255,0.9)"/>
