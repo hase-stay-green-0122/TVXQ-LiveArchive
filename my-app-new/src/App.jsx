@@ -396,11 +396,11 @@ const CSS = `
   .tour-vis-wrap { height:160px; cursor:pointer; position:relative; display:block; width:100%; overflow:hidden; }
   .tour-vis-wrap > svg { width:100% !important; height:160px !important; display:block; }
   .tour-vis-wrap > div:not(.tour-vis-footer) { width:100%; height:100%; position:absolute; top:0; left:0; }
-  .tour-vis-footer { position:absolute; bottom:0; left:0; right:0; z-index:20; display:flex; align-items:flex-end; justify-content:space-between; padding:8px 12px 9px; background:linear-gradient(0deg,rgba(0,0,0,.65) 0%,transparent 100%); pointer-events:none; }
-  .tour-vis-footer-info { display:flex; flex-direction:column; gap:2px; min-width:0; flex:1; }
-  .tour-vis-sub { font-size:10px; color:var(--gold-lt); letter-spacing:.08em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .tour-vis-period { font-size:11px; color:#fff; letter-spacing:.06em; white-space:nowrap; }
-  .tour-vis-actions { display:flex; align-items:center; gap:6px; pointer-events:all; flex-shrink:0; }
+  .tour-vis-footer { position:absolute; bottom:0; left:0; right:0; z-index:20; display:flex; align-items:flex-end; justify-content:center; padding:8px 12px 9px; background:linear-gradient(0deg,rgba(0,0,0,.65) 0%,transparent 100%); pointer-events:none; }
+  .tour-vis-footer-info { display:flex; flex-direction:column; gap:2px; align-items:center; }
+  .tour-vis-sub { font-size:10px; color:var(--gold-lt); letter-spacing:.08em; white-space:nowrap; text-align:center; }
+  .tour-vis-period { font-size:11px; color:#fff; letter-spacing:.06em; white-space:nowrap; text-align:center; }
+  .tour-vis-actions { position:absolute; bottom:9px; right:12px; display:flex; align-items:center; gap:6px; pointer-events:all; }
   .tour-card-hdr { display:flex; align-items:center; gap:12px; padding:12px 16px; cursor:pointer; }
   .tour-card-bar { width:3px; height:44px; border-radius:2px; flex-shrink:0; }
   .tour-card-info { flex:1; min-width:0; }
