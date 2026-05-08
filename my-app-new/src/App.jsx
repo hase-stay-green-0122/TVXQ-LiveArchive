@@ -868,9 +868,9 @@ function TourCard({ tour, onLiveSelect, onLiveDelete, onTourDelete }) {
         />
       )}
       {renderVis()}
-      {open && tour.lives.length > 0 && (
+      {open && tour.lives.filter(l => !l.id.startsWith("live-placeholder-")).length > 0 && (
         <div className="lives-list">
-          {tour.lives.map(live => (
+          {tour.lives.filter(l => !l.id.startsWith("live-placeholder-")).map(live => (
             <div key={live.id} className="live-item" onClick={() => onLiveSelect(live, tour)}>
               <div className="live-item-emoji">{live.emoji}</div>
               <div className="live-item-info">
