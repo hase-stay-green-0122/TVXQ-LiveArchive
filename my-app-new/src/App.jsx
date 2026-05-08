@@ -781,15 +781,15 @@ function TourCard({ tour, onLiveSelect, onLiveDelete, onTourDelete, onTourUpdate
   const footerStyle = {
     position:"absolute", bottom:0, left:0, right:0, zIndex:10,
     display:"flex", flexDirection:"column", alignItems:"center",
-    padding:"8px 12px 10px",
+    padding:"0 12px 10px",
     background:"linear-gradient(0deg,rgba(0,0,0,.7) 0%,transparent 100%)",
-    gap:3,
+    gap:0,
   };
   const actionsStyle = {
     position:"absolute", bottom:10, right:12, zIndex:11,
     display:"flex", alignItems:"center", gap:6,
   };
-  const subStyle  = { fontSize:11, color:"var(--gold-lt)", letterSpacing:".08em", whiteSpace:"nowrap", textAlign:"center" };
+  const subStyle  = { fontSize:11, color:"var(--gold-lt)", letterSpacing:".08em", whiteSpace:"nowrap", textAlign:"center", marginBottom:3 };
   const periStyle = { fontSize:12, color:"#fff", letterSpacing:".06em", whiteSpace:"nowrap", textAlign:"center" };
 
   const footer = (
