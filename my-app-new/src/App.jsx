@@ -393,37 +393,27 @@ const CSS = `
 
   /* Tour card */
   .tour-card { background:var(--ink); border-radius:14px; margin-bottom:12px; overflow:hidden; box-shadow:0 2px 10px var(--shadow); border:1px solid rgba(192,21,42,.2); }
-  .tour-vis-wrap { height:160px; cursor:pointer; position:relative; display:block; width:100%; overflow:hidden; }
-  .tour-vis-wrap > svg { width:100% !important; height:160px !important; display:block; }
-  .tour-card .tour-vis-wrap > div:not(.tour-vis-footer) { width:100%; height:100%; position:absolute; top:0; left:0; }
-  .tour-vis-footer { position:absolute; bottom:0; left:0; right:0; z-index:20; display:flex; align-items:flex-end; justify-content:center; padding:8px 12px 9px; background:linear-gradient(0deg,rgba(0,0,0,.65) 0%,transparent 100%); pointer-events:none; }
-  .tour-vis-footer-info { display:flex; flex-direction:column; gap:2px; align-items:center; }
-  .tour-vis-sub { font-size:10px; color:var(--gold-lt); letter-spacing:.08em; white-space:nowrap; text-align:center; }
-  .tour-vis-period { font-size:11px; color:#fff; letter-spacing:.06em; white-space:nowrap; text-align:center; }
-  .tour-vis-actions { position:absolute; bottom:9px; right:12px; display:flex; align-items:center; gap:6px; pointer-events:all; }
   .tour-card-arrow { font-size:18px; color:rgba(255,255,255,.6); transition:transform .2s; flex-shrink:0; }
   .tour-card-arrow.open { transform:rotate(90deg); }
 
   /* RED OCEAN visual */
-  .red-vis { height:160px; background:linear-gradient(180deg,#0a0204,#1a0208 50%,#2a0510); position:relative; overflow:hidden; }
+  .red-vis { background:linear-gradient(180deg,#0a0204,#1a0208 50%,#2a0510); }
   .red-vis::before { content:""; position:absolute; inset:0; background:radial-gradient(ellipse 300px 30px at 50% 85%,rgba(232,17,45,.35),transparent 70%),radial-gradient(ellipse 200px 20px at 30% 70%,rgba(192,21,42,.2),transparent 70%),radial-gradient(ellipse 200px 20px at 70% 60%,rgba(192,21,42,.2),transparent 70%); }
-  .red-wm { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; padding-bottom:20px; pointer-events:none; z-index:1; }
+  .red-wm { display:flex; align-items:center; justify-content:center; pointer-events:none; z-index:2; }
   .red-wm span { font-family:"Noto Serif JP",serif; font-size:44px; font-weight:300; letter-spacing:.2em; color:rgba(255,255,255,.75); white-space:nowrap; }
-  .red-waves { position:absolute; bottom:0; left:0; right:0; }
+  .red-waves { position:absolute; bottom:0; left:0; right:0; z-index:3; }
   .red-wave { position:absolute; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,rgba(232,17,45,.3) 25%,rgba(255,80,100,.5) 50%,rgba(232,17,45,.3) 75%,transparent); }
   .red-wave:nth-child(1){bottom:8px} .red-wave:nth-child(2){bottom:16px;opacity:.6} .red-wave:nth-child(3){bottom:24px;opacity:.3}
-  .red-ocean-dots { position:absolute; bottom:30px; left:0; right:0; display:flex; justify-content:center; flex-wrap:wrap; gap:3px; padding:0 12px; z-index:2; }
+  .red-ocean-dots { position:absolute; bottom:50px; left:0; right:0; display:flex; justify-content:center; flex-wrap:wrap; gap:3px; padding:0 12px; z-index:3; }
   .rod { width:3px; height:8px; border-radius:2px 2px 0 0; }
-  .red-badge { position:absolute; top:12px; right:12px; background:var(--gold); color:#fff; font-size:8px; font-weight:700; letter-spacing:.15em; padding:3px 9px; border-radius:3px; z-index:3; }
+  .red-badge { position:absolute; top:12px; right:12px; background:var(--gold); color:#fff; font-size:8px; font-weight:700; letter-spacing:.15em; padding:3px 9px; border-radius:3px; z-index:5; }
 
   /* ZONE visual */
-  .zone-vis { height:160px; background:linear-gradient(160deg,#060e1c,#0d1e38 45%,#091628); position:relative; overflow:hidden; }
+  .zone-vis { background:linear-gradient(160deg,#060e1c,#0d1e38 45%,#091628); }
   .zone-vis::before { content:""; position:absolute; inset:0; background:radial-gradient(ellipse 160px 90px at 15% 20%,rgba(80,160,255,.14),transparent 65%),radial-gradient(ellipse 120px 70px at 85% 75%,rgba(60,130,220,.12),transparent 65%),radial-gradient(ellipse 200px 40px at 50% 100%,rgba(40,100,180,.18),transparent 70%); }
-  .zone-vis::after { content:""; position:absolute; bottom:28px; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(100,170,255,.25) 30%,rgba(140,200,255,.45) 50%,rgba(100,170,255,.25) 70%,transparent); }
-  .zone-wm { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; padding-bottom:20px; pointer-events:none; }
+  .zone-wm { display:flex; align-items:center; justify-content:center; pointer-events:none; z-index:2; }
   .zone-wm span { font-family:"Noto Serif JP",serif; font-size:44px; font-weight:300; letter-spacing:.32em; color:rgba(255,255,255,.75); white-space:nowrap; }
-  .zone-dots-svg { position:absolute; inset:0; width:100%; height:100%; }
-  .zone-badge { position:absolute; top:12px; right:12px; background:rgba(80,150,255,.2); border:1px solid rgba(100,170,255,.35); color:rgba(160,210,255,.9); font-size:8px; font-weight:700; letter-spacing:.15em; padding:3px 9px; border-radius:3px; }
+  .zone-badge { position:absolute; top:12px; right:12px; background:rgba(80,150,255,.2); border:1px solid rgba(100,170,255,.35); color:rgba(160,210,255,.9); font-size:8px; font-weight:700; letter-spacing:.15em; padding:3px 9px; border-radius:3px; z-index:5; }
 
   /* Lives list */
   .lives-list { border-top:1px solid rgba(255,255,255,.06); }
@@ -778,72 +768,86 @@ function TourCard({ tour, onLiveSelect, onLiveDelete, onTourDelete }) {
   const period = getTourPeriod(tour.lives);
   const ROD = ["#e8112d","#c0152a","#ff3355","#d42035","#ff1a40","#b00d22"];
 
-  // 統一ビジュアル（110px固定）
-  const renderVis = () => {
-    // ビジュアル内共通フッター（サブタイトル・期間・削除・開閉）
-    // tour-vis-wrap直下に置くことでposition:absoluteが確実に効く
-    const visFooter = (
-      <div className="tour-vis-footer">
-        <div className="tour-vis-footer-info">
-          {tour.sub && <div className="tour-vis-sub">{tour.sub}</div>}
-          <div className="tour-vis-period">{period}</div>
-        </div>
-        <div className="tour-vis-actions">
-          <div className="tour-del-wrap" onClick={e => { e.stopPropagation(); setDelTour(true); }}>
-            <div className="tour-del-tip">ツアーを削除</div>
-            <button className="tour-del">×</button>
-          </div>
-          <div className={"tour-card-arrow "+(open?"open":"")} style={{pointerEvents:"none"}}>›</div>
-        </div>
-      </div>
-    );
 
-    if (tour.id === "tour-20th") return (
-      <div className="tour-vis-wrap" onClick={() => setOpen(o=>!o)}>
-        <div className="red-vis" style={{height:"100%",position:"relative"}}>
-          <div className="red-wm"><span>{tour.name}</span></div>
-          <div className="red-ocean-dots">
-            {Array.from({length:60}).map((_,i) => (
-              <div key={i} className="rod" style={{background:ROD[i%ROD.length],height:6+(i%5)*3,opacity:0.4+(i%4)*0.15,boxShadow:`0 0 3px ${ROD[i%ROD.length]}`}}/>
-            ))}
-          </div>
-          <div className="red-waves"><div className="red-wave"/><div className="red-wave"/><div className="red-wave"/></div>
-          <div className="red-badge">20TH ANNIVERSARY</div>
+  // ── ツアービジュアル ──
+  // 構造: outerDiv(position:relative, height:160px) > bgDiv(絶対配置・全面) + overlayDiv(絶対配置・全面) + footerDiv(絶対配置・bottom:0)
+  const VIS_H = 160;
+  const footerStyle = {
+    position:"absolute", bottom:0, left:0, right:0, zIndex:10,
+    display:"flex", flexDirection:"column", alignItems:"center",
+    padding:"8px 12px 10px",
+    background:"linear-gradient(0deg,rgba(0,0,0,.7) 0%,transparent 100%)",
+    gap:3,
+  };
+  const actionsStyle = {
+    position:"absolute", bottom:10, right:12, zIndex:11,
+    display:"flex", alignItems:"center", gap:6,
+  };
+  const subStyle  = { fontSize:11, color:"var(--gold-lt)", letterSpacing:".08em", whiteSpace:"nowrap", textAlign:"center" };
+  const periStyle = { fontSize:12, color:"#fff", letterSpacing:".06em", whiteSpace:"nowrap", textAlign:"center" };
+
+  const footer = (
+    <>
+      <div style={footerStyle}>
+        {tour.sub && <div style={subStyle}>{tour.sub}</div>}
+        <div style={periStyle}>{period}</div>
+      </div>
+      <div style={actionsStyle}>
+        <div className="tour-del-wrap" onClick={e => { e.stopPropagation(); setDelTour(true); }}>
+          <div className="tour-del-tip">ツアーを削除</div>
+          <button className="tour-del">×</button>
         </div>
-        {visFooter}
+        <div className={"tour-card-arrow "+(open?"open":"")} style={{pointerEvents:"none"}}>›</div>
+      </div>
+    </>
+  );
+
+  const outerStyle = { position:"relative", height:VIS_H, overflow:"hidden", cursor:"pointer", width:"100%" };
+  const bgFull     = { position:"absolute", inset:0, width:"100%", height:"100%" };
+
+  const renderVis = () => {
+    if (tour.id === "tour-20th") return (
+      <div style={outerStyle} onClick={() => setOpen(o=>!o)}>
+        <div className="red-vis" style={bgFull}/>
+        <div className="red-wm" style={bgFull}><span>{tour.name}</span></div>
+        <div className="red-ocean-dots">
+          {Array.from({length:60}).map((_,i) => (
+            <div key={i} className="rod" style={{background:ROD[i%ROD.length],height:6+(i%5)*3,opacity:0.4+(i%4)*0.15,boxShadow:`0 0 3px ${ROD[i%ROD.length]}`}}/>
+          ))}
+        </div>
+        <div className="red-waves"><div className="red-wave"/><div className="red-wave"/><div className="red-wave"/></div>
+        <div className="red-badge">20TH ANNIVERSARY</div>
+        {footer}
       </div>
     );
     if (tour.id === "tour-zone") return (
-      <div className="tour-vis-wrap" onClick={() => setOpen(o=>!o)}>
-        <div className="zone-vis" style={{height:"100%",position:"relative"}}>
-          <div className="zone-wm"><span>{tour.name}</span></div>
-          <svg className="zone-dots-svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
-            <circle cx="50" cy="50" r="4" fill="rgba(180,220,255,0.9)"/>
-            <circle cx="50" cy="50" r="8" fill="rgba(120,180,255,0.2)"/>
-            <circle cx="50" cy="50" r="14" fill="rgba(80,140,255,0.08)"/>
-            {ZONE_DOTS.map(({key,x,y,opacity,size}) => (
-              <circle key={key} cx={x} cy={y} r={size/2} fill={`rgba(140,200,255,${opacity})`}/>
-            ))}
-          </svg>
-          <div className="zone-badge">20TH ANNIVERSARY</div>
-        </div>
-        {visFooter}
+      <div style={outerStyle} onClick={() => setOpen(o=>!o)}>
+        <div className="zone-vis" style={bgFull}/>
+        <div className="zone-wm" style={bgFull}><span>{tour.name}</span></div>
+        <svg style={{...bgFull, zIndex:1}} viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+          <circle cx="50" cy="50" r="4" fill="rgba(180,220,255,0.9)"/>
+          <circle cx="50" cy="50" r="8" fill="rgba(120,180,255,0.2)"/>
+          <circle cx="50" cy="50" r="14" fill="rgba(80,140,255,0.08)"/>
+          {ZONE_DOTS.map(({key,x,y,opacity,size}) => (
+            <circle key={key} cx={x} cy={y} r={size/2} fill={`rgba(140,200,255,${opacity})`}/>
+          ))}
+        </svg>
+        <div className="zone-badge">20TH ANNIVERSARY</div>
+        {footer}
       </div>
     );
     const toImgUrl = (svg) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(stripSvgText(svg))}`;
-    const renderUserVis = (svgUrl) => (
-      <div className="tour-vis-wrap" onClick={() => setOpen(o=>!o)}>
-        <img src={svgUrl} style={{width:"100%",height:"110px",display:"block",objectFit:"cover"}} alt=""/>
-        <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none",zIndex:3}}>
-          <span style={{fontFamily:'"Noto Serif JP",serif',fontSize:"44px",fontWeight:300,letterSpacing:".2em",color:"rgba(255,255,255,.75)",whiteSpace:"nowrap",textShadow:"0 1px 8px rgba(0,0,0,.6)"}}>{tour.name}</span>
+    const c1 = darken(tour.color, 0.55), c2 = darken(tour.color, 0.2);
+    const svgUrl = toImgUrl(tour.svgCode || baseSvg(c1, c2, ''));
+    return (
+      <div style={outerStyle} onClick={() => setOpen(o=>!o)}>
+        <img src={svgUrl} style={{...bgFull, objectFit:"cover"}} alt=""/>
+        <div style={{...bgFull, zIndex:2, display:"flex", alignItems:"center", justifyContent:"center", pointerEvents:"none"}}>
+          <span style={{fontFamily:'"Noto Serif JP",serif', fontSize:44, fontWeight:300, letterSpacing:".2em", color:"rgba(255,255,255,.75)", whiteSpace:"nowrap"}}>{tour.name}</span>
         </div>
-        {visFooter}
+        {footer}
       </div>
     );
-    if (tour.svgCode) return renderUserVis(toImgUrl(tour.svgCode));
-    const c1 = darken(tour.color, 0.55), c2 = darken(tour.color, 0.2);
-    const fallbackSvg = baseSvg(c1, c2, '');
-    return renderUserVis(toImgUrl(fallbackSvg));
   };
 
   return (
