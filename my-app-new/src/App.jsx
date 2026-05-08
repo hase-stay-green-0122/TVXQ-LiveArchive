@@ -393,8 +393,8 @@ const CSS = `
 
   /* Tour card */
   .tour-card { background:var(--ink); border-radius:14px; margin-bottom:12px; overflow:hidden; box-shadow:0 2px 10px var(--shadow); border:1px solid rgba(192,21,42,.2); }
-  .tour-vis-wrap { height:130px; cursor:pointer; position:relative; display:block; width:100%; overflow:hidden; }
-  .tour-vis-wrap > svg { width:100% !important; height:130px !important; display:block; }
+  .tour-vis-wrap { height:160px; cursor:pointer; position:relative; display:block; width:100%; overflow:hidden; }
+  .tour-vis-wrap > svg { width:100% !important; height:160px !important; display:block; }
   .tour-vis-wrap > div:not(.tour-vis-footer) { width:100%; height:100%; position:absolute; top:0; left:0; }
   .tour-vis-footer { position:absolute; bottom:0; left:0; right:0; z-index:20; display:flex; align-items:flex-end; justify-content:space-between; padding:8px 12px 9px; background:linear-gradient(0deg,rgba(0,0,0,.65) 0%,transparent 100%); pointer-events:none; }
   .tour-vis-footer-info { display:flex; flex-direction:column; gap:2px; min-width:0; flex:1; }
@@ -410,7 +410,7 @@ const CSS = `
   .tour-card-arrow.open { transform:rotate(90deg); }
 
   /* RED OCEAN visual */
-  .red-vis { height:130px; background:linear-gradient(180deg,#0a0204,#1a0208 50%,#2a0510); position:relative; overflow:hidden; }
+  .red-vis { height:160px; background:linear-gradient(180deg,#0a0204,#1a0208 50%,#2a0510); position:relative; overflow:hidden; }
   .red-vis::before { content:""; position:absolute; inset:0; background:radial-gradient(ellipse 300px 30px at 50% 85%,rgba(232,17,45,.35),transparent 70%),radial-gradient(ellipse 200px 20px at 30% 70%,rgba(192,21,42,.2),transparent 70%),radial-gradient(ellipse 200px 20px at 70% 60%,rgba(192,21,42,.2),transparent 70%); }
   .red-wm { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; padding-bottom:20px; pointer-events:none; z-index:1; }
   .red-wm span { font-family:"Noto Serif JP",serif; font-size:44px; font-weight:300; letter-spacing:.2em; color:rgba(255,255,255,.75); white-space:nowrap; }
@@ -422,7 +422,7 @@ const CSS = `
   .red-badge { position:absolute; top:12px; right:12px; background:var(--gold); color:#fff; font-size:8px; font-weight:700; letter-spacing:.15em; padding:3px 9px; border-radius:3px; z-index:3; }
 
   /* ZONE visual */
-  .zone-vis { height:130px; background:linear-gradient(160deg,#060e1c,#0d1e38 45%,#091628); position:relative; overflow:hidden; }
+  .zone-vis { height:160px; background:linear-gradient(160deg,#060e1c,#0d1e38 45%,#091628); position:relative; overflow:hidden; }
   .zone-vis::before { content:""; position:absolute; inset:0; background:radial-gradient(ellipse 160px 90px at 15% 20%,rgba(80,160,255,.14),transparent 65%),radial-gradient(ellipse 120px 70px at 85% 75%,rgba(60,130,220,.12),transparent 65%),radial-gradient(ellipse 200px 40px at 50% 100%,rgba(40,100,180,.18),transparent 70%); }
   .zone-vis::after { content:""; position:absolute; bottom:28px; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(100,170,255,.25) 30%,rgba(140,200,255,.45) 50%,rgba(100,170,255,.25) 70%,transparent); }
   .zone-wm { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; padding-bottom:20px; pointer-events:none; }
