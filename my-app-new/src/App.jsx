@@ -1381,13 +1381,11 @@ function TourVisPreviewDialog({ tourName, tourSub, svgCode, onRetry, onConfirm }
   return (
     <div className="preview-overlay" onClick={e => e.stopPropagation()}>
       <div className="preview-dialog">
-        <div className="preview-vis-wrap" style={{position:"relative"}}>
+        <div className="preview-vis-wrap">
           <div dangerouslySetInnerHTML={{__html:svgCode}} style={{width:"100%",height:"100%"}}/>
-          <div className="tour-vis-footer">
-            <div className="tour-vis-footer-info">
-              {tourSub && <div className="tour-vis-sub">{tourSub}</div>}
-              <div className="tour-vis-period">yyyy.mm.dd</div>
-            </div>
+          <div style={{position:"absolute",bottom:0,left:0,right:0,zIndex:20,display:"flex",flexDirection:"column",alignItems:"center",padding:"8px 12px 9px",background:"linear-gradient(0deg,rgba(0,0,0,.65) 0%,transparent 100%)",gap:2}}>
+            {tourSub && <div style={{fontSize:10,color:"var(--gold-lt)",letterSpacing:".08em",whiteSpace:"nowrap",textAlign:"center"}}>{tourSub}</div>}
+            <div style={{fontSize:11,color:"#fff",letterSpacing:".06em",whiteSpace:"nowrap",textAlign:"center"}}>yyyy.mm.dd</div>
           </div>
         </div>
         <div className="preview-body">
