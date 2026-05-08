@@ -401,7 +401,7 @@ const CSS = `
   .tour-card-info { flex:1; min-width:0; }
   .tour-card-name { font-family:"Noto Serif JP",serif; font-size:11px; font-weight:400; color:rgba(255,255,255,.5); line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; letter-spacing:.05em; }
   .tour-card-period { font-size:13px; color:#fff; margin-top:2px; letter-spacing:.04em; font-weight:300; }
-  .tour-card-count { display:none; }
+  .tour-card-count { font-size:11px; color:var(--gold-lt); margin-top:3px; letter-spacing:.04em; }
   .tour-card-arrow { font-size:18px; color:rgba(255,255,255,.3); transition:transform .2s; flex-shrink:0; }
   .tour-card-arrow.open { transform:rotate(90deg); }
 
@@ -847,8 +847,8 @@ function TourCard({ tour, onLiveSelect, onLiveDelete, onTourDelete }) {
         <div className="tour-card-bar" style={{background:tour.color}}/>
         <div className="tour-card-info">
           <div className="tour-card-name">{tour.sub || ""}</div>
-          <div className="tour-card-period">{period}</div>
-          <div className="tour-card-count">{tour.lives.length}公演 · {totalSongs}曲</div>
+          <div className="tour-card-period">{tour.name}</div>
+          <div className="tour-card-count">{period}</div>
         </div>
         <div className={"tour-card-arrow "+(open?"open":"")}>›</div>
         <div className="tour-del-wrap" onClick={e => { e.stopPropagation(); setDelTour(true); }}>
