@@ -355,7 +355,7 @@ const CSS = `
     .content { grid-column:2; grid-row:1 / 3; padding:32px 40px 60px; max-width:760px; overflow-y:auto; }
     .sec-lbl { font-size:11px; margin-bottom:16px; }
     .tour-card { border-radius:18px; margin-bottom:16px; }
-    .tour-card-name { font-size:22px; }
+
     .live-item { padding:14px 20px; }
     .live-item-venue { font-size:14px; }
     .overlay { position:fixed; }
@@ -400,7 +400,6 @@ const CSS = `
   .tour-card-bar { width:3px; height:44px; border-radius:2px; flex-shrink:0; }
   .tour-card-info { flex:1; min-width:0; }
   .tour-card-name { font-family:"Noto Serif JP",serif; font-size:11px; font-weight:400; color:rgba(255,255,255,.5); line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; letter-spacing:.05em; }
-  .tour-card-period { font-size:13px; color:#fff; margin-top:2px; letter-spacing:.04em; font-weight:300; }
   .tour-card-count { font-size:11px; color:var(--gold-lt); margin-top:3px; letter-spacing:.04em; }
   .tour-card-arrow { font-size:18px; color:rgba(255,255,255,.3); transition:transform .2s; flex-shrink:0; }
   .tour-card-arrow.open { transform:rotate(90deg); }
@@ -847,7 +846,6 @@ function TourCard({ tour, onLiveSelect, onLiveDelete, onTourDelete }) {
         <div className="tour-card-bar" style={{background:tour.color}}/>
         <div className="tour-card-info">
           <div className="tour-card-name">{tour.sub || ""}</div>
-          <div className="tour-card-period">{tour.name}</div>
           <div className="tour-card-count">{period}</div>
         </div>
         <div className={"tour-card-arrow "+(open?"open":"")}>›</div>
@@ -1365,7 +1363,7 @@ function generateTourVisualSync(tourName, color, userPrompt) {
   return pattern.render(color, tourName);
 }
 
-function TourVisPreviewDialog({ tourName, svgCode, onRetry, onConfirm }) {
+function TourVisPreviewDialog({ tourName, tourSub, svgCode, onRetry, onConfirm }) {
   return (
     <div className="preview-overlay" onClick={e => e.stopPropagation()}>
       <div className="preview-dialog">
@@ -1373,7 +1371,9 @@ function TourVisPreviewDialog({ tourName, svgCode, onRetry, onConfirm }) {
           <div dangerouslySetInnerHTML={{__html:svgCode}} style={{width:"100%",height:"100%"}}/>
         </div>
         <div className="preview-body">
-          <div className="preview-ttl">{tourName||"ツアー名未設定"}</div>
+          <div style={{fontSize:11,color:"rgba(28,10,12,.4)",marginBottom:2}}>{tourSub||""}</div>
+          <div className="preview-ttl">{tourName||"ツアータイトル未設定"}</div>
+          <div style={{fontSize:11,color:"var(--gold)",marginBottom:14}}>yyyy.mm.dd</div>
           <div className="preview-btns">
             <button className="preview-retry" onClick={onRetry}>🔄 別パターン</button>
             <button className="preview-confirm" onClick={onConfirm}>✓ これで追加する</button>
@@ -1426,7 +1426,7 @@ function AddTourForm({ onClose, onSaveTour }) {
     <>
       {preview && svgCode && (
         <TourVisPreviewDialog
-          tourName={tourName} svgCode={svgCode}
+          tourName={tourName} tourSub={tourSub} svgCode={svgCode}
           onRetry={handleRetry}
           onConfirm={handleConfirm}
         />
