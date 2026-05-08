@@ -781,7 +781,7 @@ function TourCard({ tour, onLiveSelect, onLiveDelete, onTourDelete, onTourUpdate
   const footerStyle = {
     position:"absolute", bottom:0, left:0, right:0, zIndex:10,
     display:"flex", flexDirection:"column", alignItems:"center",
-    padding:"0 12px 10px",
+    padding:"16px 12px 10px",
     background:"linear-gradient(0deg,rgba(0,0,0,.7) 0%,transparent 100%)",
     gap:0,
   };
