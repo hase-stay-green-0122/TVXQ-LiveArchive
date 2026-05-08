@@ -396,12 +396,17 @@ const CSS = `
   .tour-vis-wrap { height:110px; overflow:hidden; cursor:pointer; position:relative; flex-shrink:0; display:block; width:100%; }
   .tour-vis-wrap > svg, .tour-vis-wrap svg { width:100% !important; height:110px !important; display:block; }
   .tour-vis-wrap > div { width:100%; height:110px; }
+  .tour-vis-footer { position:absolute; bottom:0; left:0; right:0; z-index:10; display:flex; align-items:flex-end; justify-content:space-between; padding:8px 12px 9px; background:linear-gradient(0deg,rgba(0,0,0,.55) 0%,transparent 100%); pointer-events:none; }
+  .tour-vis-footer-info { display:flex; flex-direction:column; gap:2px; min-width:0; }
+  .tour-vis-sub { font-size:10px; color:var(--gold-lt); letter-spacing:.08em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tour-vis-period { font-size:11px; color:#fff; letter-spacing:.06em; white-space:nowrap; }
+  .tour-vis-actions { display:flex; align-items:center; gap:6px; pointer-events:all; flex-shrink:0; }
   .tour-card-hdr { display:flex; align-items:center; gap:12px; padding:12px 16px; cursor:pointer; }
   .tour-card-bar { width:3px; height:44px; border-radius:2px; flex-shrink:0; }
   .tour-card-info { flex:1; min-width:0; }
   .tour-card-name { font-family:"Noto Serif JP",serif; font-size:11px; font-weight:400; color:rgba(255,255,255,.5); line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; letter-spacing:.05em; }
   .tour-card-count { font-size:11px; color:var(--gold-lt); margin-top:3px; letter-spacing:.04em; }
-  .tour-card-arrow { font-size:18px; color:rgba(255,255,255,.3); transition:transform .2s; flex-shrink:0; }
+  .tour-card-arrow { font-size:18px; color:rgba(255,255,255,.6); transition:transform .2s; flex-shrink:0; }
   .tour-card-arrow.open { transform:rotate(90deg); }
 
   /* RED OCEAN visual */
@@ -780,6 +785,23 @@ function TourCard({ tour, onLiveSelect, onLiveDelete, onTourDelete }) {
 
   // 統一ビジュアル（110px固定）
   const renderVis = () => {
+    // ビジュアル内共通フッター（サブタイトル・期間・削除・開閉）
+    const visFooter = (
+      <div className="tour-vis-footer">
+        <div className="tour-vis-footer-info">
+          {tour.sub && <div className="tour-vis-sub">{tour.sub}</div>}
+          <div className="tour-vis-period">{period}</div>
+        </div>
+        <div className="tour-vis-actions">
+          <div className="tour-del-wrap" onClick={e => { e.stopPropagation(); setDelTour(true); }}>
+            <div className="tour-del-tip">ツアーを削除</div>
+            <button className="tour-del">×</button>
+          </div>
+          <div className={"tour-card-arrow "+(open?"open":"")} style={{pointerEvents:"none"}}>›</div>
+        </div>
+      </div>
+    );
+
     if (tour.id === "tour-20th") return (
       <div className="tour-vis-wrap" onClick={() => setOpen(o=>!o)}>
         <div className="red-vis" style={{height:"100%"}}>
@@ -792,6 +814,7 @@ function TourCard({ tour, onLiveSelect, onLiveDelete, onTourDelete }) {
           <div className="red-waves"><div className="red-wave"/><div className="red-wave"/><div className="red-wave"/></div>
           <div className="red-badge">20TH ANNIVERSARY</div>
         </div>
+        {visFooter}
       </div>
     );
     if (tour.id === "tour-zone") return (
@@ -808,6 +831,7 @@ function TourCard({ tour, onLiveSelect, onLiveDelete, onTourDelete }) {
           </svg>
           <div className="zone-badge">20TH ANNIVERSARY</div>
         </div>
+        {visFooter}
       </div>
     );
     const toImgUrl = (svg) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(stripSvgText(svg))}`;
@@ -817,6 +841,7 @@ function TourCard({ tour, onLiveSelect, onLiveDelete, onTourDelete }) {
         <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none",zIndex:3}}>
           <span style={{fontFamily:'"Noto Serif JP",serif',fontSize:"44px",fontWeight:300,letterSpacing:".2em",color:"rgba(255,255,255,.75)",whiteSpace:"nowrap",textShadow:"0 1px 8px rgba(0,0,0,.6)"}}>{tour.name}</span>
         </div>
+        {visFooter}
       </div>
     );
     if (tour.svgCode) return renderUserVis(toImgUrl(tour.svgCode));
@@ -842,19 +867,7 @@ function TourCard({ tour, onLiveSelect, onLiveDelete, onTourDelete }) {
         />
       )}
       {renderVis()}
-      <div className="tour-card-hdr" onClick={() => setOpen(o=>!o)}>
-        <div className="tour-card-bar" style={{background:tour.color}}/>
-        <div className="tour-card-info">
-          <div className="tour-card-name">{tour.sub || ""}</div>
-          <div className="tour-card-count">{period}</div>
-        </div>
-        <div className={"tour-card-arrow "+(open?"open":"")}>›</div>
-        <div className="tour-del-wrap" onClick={e => { e.stopPropagation(); setDelTour(true); }}>
-          <div className="tour-del-tip">ツアーを削除</div>
-          <button className="tour-del">×</button>
-        </div>
-      </div>
-      {open && (
+      {open && tour.lives.length > 0 && (
         <div className="lives-list">
           {tour.lives.map(live => (
             <div key={live.id} className="live-item" onClick={() => onLiveSelect(live, tour)}>
@@ -1367,13 +1380,16 @@ function TourVisPreviewDialog({ tourName, tourSub, svgCode, onRetry, onConfirm }
   return (
     <div className="preview-overlay" onClick={e => e.stopPropagation()}>
       <div className="preview-dialog">
-        <div className="preview-vis-wrap">
+        <div className="preview-vis-wrap" style={{position:"relative"}}>
           <div dangerouslySetInnerHTML={{__html:svgCode}} style={{width:"100%",height:"100%"}}/>
+          <div className="tour-vis-footer">
+            <div className="tour-vis-footer-info">
+              {tourSub && <div className="tour-vis-sub">{tourSub}</div>}
+              <div className="tour-vis-period">yyyy.mm.dd</div>
+            </div>
+          </div>
         </div>
         <div className="preview-body">
-          <div style={{fontSize:11,color:"rgba(28,10,12,.4)",marginBottom:2}}>{tourSub||""}</div>
-          <div className="preview-ttl">{tourName||"ツアータイトル未設定"}</div>
-          <div style={{fontSize:11,color:"var(--gold)",marginBottom:14}}>yyyy.mm.dd</div>
           <div className="preview-btns">
             <button className="preview-retry" onClick={onRetry}>🔄 別パターン</button>
             <button className="preview-confirm" onClick={onConfirm}>✓ これで追加する</button>
