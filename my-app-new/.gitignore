@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# テスト
+test/shots
+firebase-debug.log
+firestore-debug.log

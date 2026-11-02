@@ -1,0 +1,13 @@
+[
+ {"tourId":"tour-20th","tourName":"RED OCEAN","tourSub":"東方神起 20th Anniversary LIVE IN NISSAN STADIUM","tourColor":"#c0152a","featured":true,
+  "live":{"id":"nissan-0425","date":"2026.04.25","dateLabel":"2026年4月25日（土）","open":"15:00","start":"17:00","venue":"日産スタジアム","seat":"未設定","highlight":null,"tag":"横浜","emoji":"🎡",
+   "songs":[{"n":1,"t":"small talk"},{"n":2,"t":"Reboot","e":true}],"memory":{"before":"","after":"","highlight":"","other":""},"tips":[],"photos":[]}},
+ {"tourId":"tour-20th","tourName":"RED OCEAN","tourSub":"東方神起 20th Anniversary LIVE IN NISSAN STADIUM","tourColor":"#c0152a","featured":true,
+  "live":{"id":"nissan-0426","date":"2026.04.26","dateLabel":"2026年4月26日（日）","open":"15:00","start":"17:00","venue":"日産スタジアム","seat":"W1F / 入口W13 / 列8 / 座席245","highlight":"W1F","tag":"横浜","emoji":"🎡",
+   "songs":[{"n":1,"t":"small talk"},{"n":2,"t":"Rising Sun"}],"memory":{"before":"楽しみ","after":"","highlight":"イントロで全身が震えた","other":""},
+   "tips":[{"cat":"🍜 ライブ前グルメ","text":"三代目茂蔵","url":"https://example.com"}],"photos":["fsphoto:legacyphoto"]}},
+ {"tourId":"tour-zone","tourName":"ZONE","tourSub":"東方神起 20th Anniversary LIVE TOUR","tourColor":"#1a3a6b","featured":false,
+  "live":{"id":"live-placeholder-1","date":"未設定","dateLabel":"未設定","open":"","start":"","venue":"未設定","seat":"未設定","highlight":null,"tag":"未","emoji":"🎤","songs":[],"photos":[],"memory":{"before":"","after":"","highlight":"","other":""},"tips":[]}},
+ {"tourId":"tour-user-1","tourName":"NEW TOUR","tourSub":null,"tourColor":"#5a1a7a","featured":false,"svgCode":null,
+  "live":{"id":"live-placeholder-2","date":"未設定","dateLabel":"未設定","open":"","start":"","venue":"未設定","seat":"未設定","highlight":null,"tag":"未","emoji":"🎤","songs":[],"photos":[],"memory":{"before":"","after":"","highlight":"","other":""},"tips":[]}}
+]
