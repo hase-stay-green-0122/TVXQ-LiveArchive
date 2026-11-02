@@ -1,105 +1,11 @@
-import { useState, useMemo, useEffect } from "react";
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-// ─────────────────────────────────────────────
-//  Firebase 初期化
-// ─────────────────────────────────────────────
-
-const firebaseConfig = {
-  apiKey: "AIzaSyB9AckvcNLR4TWFXMqtI0uaSIZEF1wXhoU",
-  authDomain: "tvxq-live-archive.firebaseapp.com",
-  projectId: "tvxq-live-archive",
-  storageBucket: "tvxq-live-archive.firebasestorage.app",
-  messagingSenderId: "687624555209",
-  appId: "1:687624555209:web:0575b35d00ea4984139b18",
-};
-
-const firebaseApp = initializeApp(firebaseConfig);
-const db = getFirestore(firebaseApp);
-const DOC_REF = doc(db, "archive", "allLives");
-
-const loadFromFirestore = async () => {
-  const snap = await getDoc(DOC_REF);
-  if (snap.exists()) return snap.data().lives;
-  return null;
-};
-
-const saveToFirestore = async (lives) => {
-  await setDoc(DOC_REF, { lives });
-};
-
-// ─────────────────────────────────────────────
-//  写真（Firestoreに1枚1ドキュメントで保存）
-//  Firebase Storageは有料プラン必須のため、ブラウザで圧縮して
-//  photos/{id} に base64 で保存し、ライブ側には "fsphoto:{id}" だけを持たせる
-// ─────────────────────────────────────────────
-
-const PHOTO_COL    = "photos";
-const PHOTO_PREFIX = "fsphoto:";
-const PHOTO_MAX_SIDE  = 1280;
-const PHOTO_MAX_CHARS = 900_000; // Firestoreの1ドキュメント上限(1MiB)に余裕を持たせる
-
-const isStoredPhoto = (p) => typeof p === "string" && p.startsWith(PHOTO_PREFIX);
-const isDirectPhoto = (p) => typeof p === "string" && (p.startsWith("data:") || p.startsWith("http"));
-
-const photoCache = new Map(); // id -> Promise<string|null>
-
-const loadPhoto = (id) => {
-  if (!photoCache.has(id)) {
-    photoCache.set(id, getDoc(doc(db, PHOTO_COL, id))
-      .then(snap => (snap.exists() ? snap.data().data : null))
-      .catch(err => { console.error("写真の読み込みに失敗:", err); photoCache.delete(id); return null; }));
-  }
-  return photoCache.get(id);
-};
-
-const loadImageElement = (file) => new Promise((resolve, reject) => {
-  const url = URL.createObjectURL(file);
-  const img = new Image();
-  img.onload  = () => { URL.revokeObjectURL(url); resolve(img); };
-  img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("画像を読み込めませんでした")); };
-  img.src = url;
-});
-
-// 長辺を縮小しつつ、JPEG品質を下げてサイズ上限に収める
-const compressImage = async (file) => {
-  const img = await loadImageElement(file);
-  let side = PHOTO_MAX_SIDE;
-  for (let attempt = 0; attempt < 4; attempt++) {
-    const scale  = Math.min(1, side / Math.max(img.naturalWidth, img.naturalHeight));
-    const canvas = document.createElement("canvas");
-    canvas.width  = Math.max(1, Math.round(img.naturalWidth  * scale));
-    canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
-    const ctx = canvas.getContext("2d");
-    ctx.fillStyle = "#fff"; // 透過PNG対策
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    for (const q of [0.82, 0.7, 0.55]) {
-      const dataUrl = canvas.toDataURL("image/jpeg", q);
-      if (dataUrl.length <= PHOTO_MAX_CHARS) return dataUrl;
-    }
-    side = Math.round(side * 0.7);
-  }
-  throw new Error("画像が大きすぎて圧縮できませんでした");
-};
-
-const uploadPhoto = async (file) => {
-  const data = await compressImage(file);
-  const id = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-  await setDoc(doc(db, PHOTO_COL, id), { data, createdAt: Date.now() });
-  photoCache.set(id, Promise.resolve(data));
-  return PHOTO_PREFIX + id;
-};
-
-const deletePhotos = async (refs) => {
-  const ids = (refs || []).filter(isStoredPhoto).map(r => r.slice(PHOTO_PREFIX.length));
-  await Promise.all(ids.map(async (id) => {
-    photoCache.delete(id);
-    try { await deleteDoc(doc(db, PHOTO_COL, id)); }
-    catch (err) { console.error("写真の削除に失敗:", err); }
-  }));
-};
+import { useState, useMemo, useEffect, useRef } from "react";
+import { isOwnerEmail, normalizeEmail, watchAuth } from "./lib/firebase.js";
+import { isStoredPhoto, isDirectPhoto, storedPhotoId, loadPhoto, uploadPhoto, deletePhotos } from "./lib/photos.js";
+import {
+  EMPTY_MEMORY, subscribeMembers, subscribeArchive, migrateLegacyIfNeeded,
+  createTour, updateTour, deleteTour, createLive, updateLive, deleteLive, saveMyEntry,
+} from "./lib/store.js";
+import { LoadingScreen, MessageScreen, LoginScreen, NotInvitedScreen, UserBar, MembersDialog } from "./components/Auth.jsx";
 
 // ─────────────────────────────────────────────
 //  定数・データ
@@ -636,15 +542,48 @@ const CSS = `
   .tour-edit:hover { background:rgba(100,160,255,.35); color:#fff; }
   .tour-edit-tip { position:absolute; right:32px; top:50%; transform:translateY(-50%); background:rgba(28,10,12,.92); color:#fff; font-size:11px; padding:4px 10px; border-radius:6px; white-space:nowrap; pointer-events:none; opacity:0; transition:opacity .15s; }
   .tour-edit-wrap:hover .tour-edit-tip { opacity:1; }
+
+  /* みんなの記録 */
+  .entry-card { background:var(--offwhite); border:1px solid rgba(192,21,42,.1); border-radius:14px; padding:14px 14px 16px; margin-bottom:14px; }
+  .entry-card.mine { border-color:rgba(192,21,42,.3); box-shadow:0 2px 10px var(--shadow); }
+  .entry-empty { text-align:center; padding:20px 14px; }
+  .entry-hdr { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+  .entry-avatar { width:28px; height:28px; border-radius:50%; flex-shrink:0; object-fit:cover; }
+  .entry-avatar-ph { display:flex; align-items:center; justify-content:center; background:var(--mist); font-size:15px; }
+  .entry-name { font-size:15px; font-weight:600; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .entry-me { background:var(--red); color:#fff; font-size:9px; padding:2px 8px; border-radius:10px; flex-shrink:0; letter-spacing:.1em; }
+  .entry-edit { margin-left:auto; background:transparent; border:1px solid rgba(192,21,42,.3); color:var(--red); border-radius:8px; padding:5px 10px; font-size:12px; cursor:pointer; font-family:"Noto Serif JP",serif; flex-shrink:0; }
+  .entry-sub { font-size:11px; letter-spacing:.15em; color:rgba(28,10,12,.45); margin:14px 0 8px; font-weight:600; }
+  .entry-seat { background:#1c0a0c; border-radius:12px; padding:12px; text-align:center; color:rgba(255,255,255,.6); font-size:13px; }
+  .fscope { margin-left:8px; font-size:9px; letter-spacing:.08em; font-weight:normal; padding:2px 8px; border-radius:10px; background:rgba(28,10,12,.06); color:rgba(28,10,12,.5); vertical-align:middle; }
+  .fscope.mine { background:rgba(192,21,42,.1); color:var(--red); }
+  .live-item-meta { font-size:10px; color:rgba(255,255,255,.35); margin-top:2px; display:flex; gap:10px; }
 `;
 
 // ─────────────────────────────────────────────
 //  ユーティリティ
 // ─────────────────────────────────────────────
 
-function usePhotoUpload(initial = []) {
+// 写真の追加・削除を管理。保存せずにフォームを閉じた場合は、
+// そのフォームで新しくアップロードした写真をFirestoreから片付ける。
+function usePhotoUpload(initial = [], uid) {
   const [photos,    setPhotos]    = useState(initial);
   const [uploading, setUploading] = useState(false);
+  const pending = useRef({ uploaded: [], committed: false });
+
+  useEffect(() => {
+    const state = pending.current;
+    return () => { if (!state.committed) deletePhotos(state.uploaded); };
+  }, []);
+
+  // 保存が成功したら呼ぶ。保存に含まれなかった新規アップロードだけを片付ける
+  const commit = (finalPhotos) => {
+    const kept = new Set(finalPhotos);
+    deletePhotos(pending.current.uploaded.filter(p => !kept.has(p)));
+    // アンマウント時のクリーンアップは同じオブジェクトを参照しているので、置き換えずに書き換える
+    pending.current.uploaded  = [];
+    pending.current.committed = true;
+  };
 
   const handleAdd = async (e) => {
     const files = Array.from(e.target.files);
@@ -653,7 +592,8 @@ function usePhotoUpload(initial = []) {
     setUploading(true);
     try {
       const room = Math.max(0, 6 - photos.length);
-      const refs = await Promise.all(files.slice(0, room).map(uploadPhoto));
+      const refs = await Promise.all(files.slice(0, room).map(f => uploadPhoto(f, uid)));
+      pending.current.uploaded.push(...refs);
       setPhotos(prev => [...prev, ...refs].slice(0, 6));
     } catch (err) {
       console.error("写真のアップロードに失敗:", err);
@@ -665,7 +605,7 @@ function usePhotoUpload(initial = []) {
 
   const handleRemove = (i) => setPhotos(prev => prev.filter((_,idx) => idx !== i));
 
-  return { photos, handleAdd, handleRemove, uploading };
+  return { photos, handleAdd, handleRemove, uploading, commit };
 }
 
 const parseTips = (text) =>
@@ -694,7 +634,7 @@ function PhotoImg({ src, size }) {
   useEffect(() => {
     if (!isStoredPhoto(src)) return;
     let alive = true;
-    loadPhoto(src.slice(PHOTO_PREFIX.length)).then(url => { if (alive) setLoaded({ src, url }); });
+    loadPhoto(storedPhotoId(src)).then(url => { if (alive) setLoaded({ src, url }); });
     return () => { alive = false; };
   }, [src]);
 
@@ -735,10 +675,11 @@ function PhotoEditor({ photos, onAdd, onRemove, uploading }) {
 // セクション順統一コンポーネント群
 // 順番：①セットリスト ②座席 ③写真 ④思い出メモ ⑤Tips
 
-function MemorySection({ memory }) {
+function MemorySection({ memory, hideEmpty = false }) {
+  const fields = hideEmpty ? MEM_FIELDS.filter(f => (memory?.[f.key] || "").trim()) : MEM_FIELDS;
   return (
     <div className="mem-list">
-      {MEM_FIELDS.map(({ key, icon, label }) => (
+      {fields.map(({ key, icon, label }) => (
         <div key={key} className="mem-card">
           <div className="mem-hdr"><span className="mem-icon">{icon}</span><span className="mem-lbl">{label}</span></div>
           <div className="mem-text">
@@ -847,7 +788,7 @@ function DeleteDialog({ live, onCancel, onConfirm }) {
   );
 }
 
-function TourCard({ tour, onLiveSelect, onLiveDelete, onTourDelete, onTourUpdate }) {
+function TourCard({ tour, isOwner, myUid, entriesByLive, onLiveSelect, onLiveDelete, onTourDelete, onTourUpdate }) {
   const [open, setOpen] = useState(false);
   const [delTarget, setDelTarget] = useState(null);
   const [delTour, setDelTour] = useState(false);
@@ -884,10 +825,12 @@ function TourCard({ tour, onLiveSelect, onLiveDelete, onTourDelete, onTourUpdate
           <div className="tour-edit-tip">ツアーを編集</div>
           <button className="tour-edit">✏️</button>
         </div>
-        <div className="tour-del-wrap" onClick={e => { e.stopPropagation(); setDelTour(true); }}>
-          <div className="tour-del-tip">ツアーを削除</div>
-          <button className="tour-del">×</button>
-        </div>
+        {isOwner && (
+          <div className="tour-del-wrap" onClick={e => { e.stopPropagation(); setDelTour(true); }}>
+            <div className="tour-del-tip">ツアーを削除</div>
+            <button className="tour-del">×</button>
+          </div>
+        )}
         <div className={"tour-card-arrow "+(open?"open":"")} style={{pointerEvents:"none"}}>›</div>
       </div>
     </>
@@ -945,14 +888,14 @@ function TourCard({ tour, onLiveSelect, onLiveDelete, onTourDelete, onTourUpdate
     <div className="tour-card">
       {delTour && (
         <DeleteDialog
-          live={{date: tour.name, venue:`全${tour.lives.length}公演が削除されます`}}
+          live={{date: tour.name, venue:`全${tour.lives.length}公演と、メンバー全員の記録・写真が削除されます`}}
           onCancel={() => setDelTour(false)}
           onConfirm={() => { onTourDelete(tour.id); setDelTour(false); }}
         />
       )}
       {delTarget && (
         <DeleteDialog
-          live={delTarget}
+          live={{...delTarget, venue:`${delTarget.venue}（メンバー全員の記録・写真も削除されます）`}}
           onCancel={() => setDelTarget(null)}
           onConfirm={() => { onLiveDelete(delTarget.id); setDelTarget(null); }}
         />
@@ -965,22 +908,38 @@ function TourCard({ tour, onLiveSelect, onLiveDelete, onTourDelete, onTourUpdate
         />
       )}
       {renderVis()}
-      {open && tour.lives.filter(l => !l.id.startsWith("live-placeholder-")).length > 0 && (
+      {open && tour.lives.length === 0 && (
         <div className="lives-list">
-          {tour.lives.filter(l => !l.id.startsWith("live-placeholder-")).map(live => (
-            <div key={live.id} className="live-item" onClick={() => onLiveSelect(live, tour)}>
-              <div className="live-item-emoji">{live.emoji}</div>
-              <div className="live-item-info">
-                <div className="live-item-date">{live.date}</div>
-                <div className="live-item-venue">{live.venue}</div>
-                <div className="live-item-seat">{live.seat.split(" / ")[0]}</div>
+          <div className="live-item" style={{cursor:"default",color:"rgba(255,255,255,.4)",fontSize:12}}>
+            まだ公演がありません。「＋」→「ライブを追加」から記録できます。
+          </div>
+        </div>
+      )}
+      {open && tour.lives.length > 0 && (
+        <div className="lives-list">
+          {tour.lives.map(live => {
+            const liveEntries = entriesByLive.get(live.id) || [];
+            const mine = liveEntries.find(e => e.uid === myUid);
+            return (
+              <div key={live.id} className="live-item" onClick={() => onLiveSelect(live)}>
+                <div className="live-item-emoji">{live.emoji}</div>
+                <div className="live-item-info">
+                  <div className="live-item-date">{live.date}</div>
+                  <div className="live-item-venue">{live.venue}</div>
+                  <div className="live-item-meta">
+                    {mine?.seat && <span>{mine.seat.split(" / ")[0]}</span>}
+                    <span>👥 {liveEntries.length}人の記録</span>
+                  </div>
+                </div>
+                {isOwner && (
+                  <div className="live-del-wrap" onClick={e => { e.stopPropagation(); setDelTarget(live); }}>
+                    <div className="live-del-tip">削除する</div>
+                    <button className="live-del">×</button>
+                  </div>
+                )}
               </div>
-              <div className="live-del-wrap" onClick={e => { e.stopPropagation(); setDelTarget(live); }}>
-                <div className="live-del-tip">削除する</div>
-                <button className="live-del">×</button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -1050,24 +1009,59 @@ function StadiumMap({ highlight, seat }) {
 //  順番：①セットリスト ②座席 ③写真 ④思い出メモ ⑤Tips
 // ─────────────────────────────────────────────
 
+// 一人分の記録（座席・写真・思い出・Tips）
+function EntryCard({ entry, isMine, isFeatured, onEdit }) {
+  const memory    = entry.memory || EMPTY_MEMORY;
+  const hasMemory = MEM_FIELDS.some(f => (memory[f.key] || "").trim());
+  const photos    = entry.photos || [];
+  const tips      = entry.tips || [];
+  return (
+    <div className={"entry-card" + (isMine ? " mine" : "")}>
+      <div className="entry-hdr">
+        {entry.photoURL
+          ? <img className="entry-avatar" src={entry.photoURL} alt="" referrerPolicy="no-referrer"/>
+          : <span className="entry-avatar entry-avatar-ph">👤</span>}
+        <span className="entry-name">{entry.name}</span>
+        {isMine && <span className="entry-me">あなた</span>}
+        {isMine && <button className="entry-edit" onClick={onEdit}>✏️ 編集</button>}
+      </div>
+      <div className="entry-sub">座席位置</div>
+      {isFeatured && (entry.seat || entry.highlight)
+        ? <StadiumMap highlight={entry.highlight} seat={entry.seat}/>
+        : <div className="entry-seat">{entry.seat || "座席情報は未設定です"}</div>}
+      {photos.length > 0 && <>
+        <div className="entry-sub">フォト</div>
+        <div className="photos">
+          {photos.map((p,i) => <div key={p+i} className="photo"><PhotoImg src={p}/></div>)}
+        </div>
+      </>}
+      <div className="entry-sub">思い出メモ</div>
+      {hasMemory
+        ? <MemorySection memory={memory} hideEmpty/>
+        : <div className="empty" style={{fontSize:13}}>まだ記録されていません…</div>}
+      {tips.length > 0 && <>
+        <div className="entry-sub">Live を楽しむための Tips</div>
+        <TipsSection tips={tips}/>
+      </>}
+    </div>
+  );
+}
+
 // ── 公演詳細モーダル ──
-function LiveModal({ live:liveProp, tour, onClose, onUpdate }) {
+// live・entries は App のリアルタイム購読から渡されるので、他の人の更新も即座に反映される
+function LiveModal({ live, tour, entries, user, onClose }) {
   const isFeatured = !!tour.featured;
   const [editing, setEditing] = useState(false);
-  const [live, setLive] = useState(liveProp);
-
-  const handleUpdate = (id, changes) => {
-    const merged = { ...live, ...changes };
-    setLive(merged);       // モーダル内の表示を即時更新
-    onUpdate(id, changes); // 親(App)のallLivesとFirestoreに保存
-  };
+  const myEntry = entries.find(e => e.uid === user.uid) || null;
+  const others  = entries.filter(e => e.uid !== user.uid);
 
   if (editing) return (
     <EditForm
       live={live}
+      myEntry={myEntry}
+      user={user}
       onClose={() => setEditing(false)}
       onGoHome={onClose}
-      onUpdate={handleUpdate}
     />
   );
 
@@ -1093,39 +1087,25 @@ function LiveModal({ live:liveProp, tour, onClose, onUpdate }) {
           </div>
           <div className="mhero-wm">{tour.name}</div>
         </div>
-        {/* ①セットリスト */}
+        {/* ①セットリスト（みんなで共有） */}
         <div className="msec">
-          <div className="msec-ttl">セットリスト<span style={{fontSize:10,color:"rgba(28,10,12,0.3)",fontWeight:"normal",marginLeft:"auto",paddingLeft:8}}>全{live.songs.length}曲</span></div>
-          <Setlist songs={live.songs}/>
+          <div className="msec-ttl">セットリスト<span style={{fontSize:10,color:"rgba(28,10,12,0.3)",fontWeight:"normal",marginLeft:"auto",paddingLeft:8}}>全{(live.songs||[]).length}曲</span></div>
+          {(live.songs||[]).length > 0
+            ? <Setlist songs={live.songs}/>
+            : <div className="empty" style={{fontSize:13}}>セットリストは未登録です</div>}
         </div>
-        {/* ②座席 */}
+        {/* ②〜⑤ 一人ひとりの記録 */}
         <div className="msec">
-          <div className="msec-ttl">座席位置</div>
-          {isFeatured
-            ? <StadiumMap highlight={live.highlight} seat={live.seat}/>
-            : <div style={{background:"#1c0a0c",borderRadius:12,padding:14,textAlign:"center",color:"rgba(255,255,255,.28)",fontSize:12}}>{live.seat||"座席情報は未設定です"}</div>
-          }
-        </div>
-        {/* ③写真 */}
-        <div className="msec">
-          <div className="msec-ttl">フォト</div>
-          <div className="photos">
-            {(live.photos||[]).map((p,i) => (
-              <div key={i} className="photo">
-                <PhotoImg src={p}/>
+          <div className="msec-ttl">みんなの記録<span style={{fontSize:10,color:"rgba(28,10,12,0.3)",fontWeight:"normal",marginLeft:"auto",paddingLeft:8}}>{entries.length}人</span></div>
+          {myEntry
+            ? <EntryCard entry={myEntry} isMine isFeatured={isFeatured} onEdit={() => setEditing(true)}/>
+            : (
+              <div className="entry-card mine entry-empty">
+                <div style={{fontSize:13,color:"rgba(28,10,12,.55)",marginBottom:10}}>あなたの記録はまだありません</div>
+                <button className="edit-btn" onClick={() => setEditing(true)}>✏️ 自分の記録を書く</button>
               </div>
-            ))}
-          </div>
-        </div>
-        {/* ④思い出メモ */}
-        <div className="msec">
-          <div className="msec-ttl">思い出メモ</div>
-          <MemorySection memory={live.memory}/>
-        </div>
-        {/* ⑤Tips */}
-        <div className="msec">
-          <div className="msec-ttl">Live を楽しむための Tips</div>
-          <TipsSection tips={live.tips}/>
+            )}
+          {others.map(e => <EntryCard key={e.id} entry={e} isFeatured={isFeatured}/>)}
         </div>
       </div>
     </div>
@@ -1134,27 +1114,34 @@ function LiveModal({ live:liveProp, tour, onClose, onUpdate }) {
 
 // ── 編集フォーム ──
 // 保存してホームに戻るボタン（押下フィードバック付き）
-function SaveHomeButton({ doSave, onGoHome }) {
+// doSave は Promise を返す。false を返したら保存を中止（ボタンを元に戻す）
+function SaveHomeButton({ doSave, onGoHome, disabled }) {
   const [state, setState] = useState("idle"); // idle | saving | done
 
-  const handleClick = () => {
-    if (state !== "idle") return;
+  const handleClick = async () => {
+    if (state !== "idle" || disabled) return;
     setState("saving");
-    doSave();
-    setTimeout(() => {
-      setState("done");
-      setTimeout(() => onGoHome(), 600);
-    }, 400);
+    let ok = false;
+    try {
+      ok = (await doSave()) !== false;
+    } catch (err) {
+      console.error("保存に失敗:", err);
+      alert("保存に失敗しました。通信状況を確認して、もう一度お試しください。");
+    }
+    if (!ok) { setState("idle"); return; }
+    setState("done");
+    setTimeout(() => onGoHome(), 600);
   };
 
   const label = state === "saving" ? "保存中…"
               : state === "done"   ? "✓ 保存しました！"
+              : disabled           ? "写真をアップロード中…"
               : "🏠 保存してホームに戻る";
 
   return (
     <button
       className={"save-btn" + (state !== "idle" ? " saving" : "")}
-      style={{marginBottom:24, ...(state === "done" ? {background:"linear-gradient(135deg,#2a8a3e,#1a6b2e)"} : {})}}
+      style={{marginBottom:24, ...(disabled ? {opacity:.5} : {}), ...(state === "done" ? {background:"linear-gradient(135deg,#2a8a3e,#1a6b2e)"} : {})}}
       onClick={handleClick}
     >
       {label}
@@ -1162,20 +1149,46 @@ function SaveHomeButton({ doSave, onGoHome }) {
   );
 }
 
-function EditForm({ live, onClose, onGoHome, onUpdate }) {
-  const [seat, setSeat]         = useState(live.seat||"");
-  const [setlist, setSetlist]   = useState((live.songs||[]).map((s,i) => `${i+1}. ${s.t}${s.e?" [アンコール]":""}`).join("\n"));
-  const [mem, setMem]           = useState(live.memory||{before:"",after:"",highlight:"",other:""});
-  const [tipsText, setTipsText] = useState(tipsToText(live.tips));
-  const { photos, handleAdd, handleRemove, uploading } = usePhotoUpload(live.photos||[]);
+const parseSetlist = (text) =>
+  text.split("\n").map(l=>l.trim()).filter(Boolean).map((line,i) => {
+    const e = /アンコール/i.test(line);
+    const t = line.replace(/^\d+\.\s*/,"").replace(/\s*[[［]アンコール[\]］]/i,"");
+    return { n:i+1, t, ...(e?{e:true}:{}) };
+  });
 
-  const doSave = () => {
-    const songs = setlist.split("\n").map(l=>l.trim()).filter(Boolean).map((line,i) => {
-      const e = /アンコール/i.test(line);
-      const t = line.replace(/^\d+\.\s*/,"").replace(/\s*[[［]アンコール[\]］]/i,"");
-      return { n:i+1, t, ...(e?{e:true}:{}) };
-    });
-    onUpdate(live.id, { seat, songs, photos, memory:mem, tips:parseTips(tipsText) });
+const setlistToText = (songs) =>
+  (songs||[]).map((s,i) => `${i+1}. ${s.t}${s.e?" [アンコール]":""}`).join("\n");
+
+const sameSongs = (a, b) => JSON.stringify(a || []) === JSON.stringify(b || []);
+
+function EditForm({ live, myEntry, user, onClose, onGoHome }) {
+  const [seat, setSeat]         = useState(myEntry?.seat || "");
+  const [setlist, setSetlist]   = useState(setlistToText(live.songs));
+  const [mem, setMem]           = useState({ ...EMPTY_MEMORY, ...(myEntry?.memory || {}) });
+  const [tipsText, setTipsText] = useState(tipsToText(myEntry?.tips));
+  const { photos, handleAdd, handleRemove, uploading, commit } = usePhotoUpload(myEntry?.photos || [], user.uid);
+  // フォームを開いた時点のセットリスト（他のメンバーの同時編集を検知するため）
+  const [songsAtOpen] = useState(live.songs || []);
+
+  const doSave = async () => {
+    const songs = parseSetlist(setlist);
+    if (!sameSongs(songs, songsAtOpen)) {
+      // 編集中に他のメンバーがセットリストを変えていたら確認する
+      if (!sameSongs(live.songs, songsAtOpen) &&
+          !confirm("編集中に他のメンバーがセットリストを更新しました。\nあなたの内容で上書きしますか？\n（キャンセルすると保存を中止します）")) {
+        return false;
+      }
+      await updateLive(user, live.id, { songs });
+    }
+    await saveMyEntry(user, live.id, {
+      seat: seat.trim(),
+      highlight: myEntry?.highlight ?? null,
+      photos,
+      memory: mem,
+      tips: parseTips(tipsText),
+    }, myEntry?.photos || []);
+    commit(photos);
+    return true;
   };
 
   return (
@@ -1192,27 +1205,24 @@ function EditForm({ live, onClose, onGoHome, onUpdate }) {
           <div className="mtitle">{live.dateLabel||live.date}</div>
           <div className="mvenue">📍 {live.venue}</div>
         </div>
-        {/* ①セットリスト */}
-        <div className="fdivider">セットリスト</div>
+        {/* ①セットリスト（共有） */}
+        <div className="fdivider">セットリスト<span className="fscope">みんなで共有</span></div>
         <div className="fsec">
           <textarea className="finp" rows={5} placeholder={"1. Mirotic\n2. Rising Sun\n3. Before U Go  [アンコール]"} style={{resize:"none",lineHeight:1.8}} value={setlist} onChange={e=>setSetlist(e.target.value)}/>
         </div>
-        {/* ②座席 */}
-        <div className="fdivider">座席</div>
+        {/* ②〜⑤ 自分の記録 */}
+        <div className="fdivider">座席<span className="fscope mine">あなたの記録</span></div>
         <div className="fsec">
           <label className="flbl">座席情報</label>
           <input className="finp" placeholder="例: W1F / 入口W13 / 列8 / 座席245" value={seat} onChange={e=>setSeat(e.target.value)}/>
         </div>
-        {/* ③写真 */}
-        <div className="fdivider">写真</div>
+        <div className="fdivider">写真<span className="fscope mine">あなたの記録</span></div>
         <PhotoEditor photos={photos} onAdd={handleAdd} onRemove={handleRemove} uploading={uploading}/>
-        {/* ④思い出メモ */}
-        <div className="fdivider">思い出メモ</div>
+        <div className="fdivider">思い出メモ<span className="fscope mine">あなたの記録</span></div>
         <MemInputs mem={mem} setMem={setMem}/>
-        {/* ⑤Tips */}
-        <div className="fdivider">Live を楽しむための Tips</div>
+        <div className="fdivider">Live を楽しむための Tips<span className="fscope mine">あなたの記録</span></div>
         <TipsInput value={tipsText} onChange={e=>setTipsText(e.target.value)}/>
-        <SaveHomeButton doSave={doSave} onGoHome={onGoHome}/>
+        <SaveHomeButton doSave={doSave} onGoHome={onGoHome} disabled={uploading}/>
       </div>
     </div>
   );
@@ -1911,33 +1921,7 @@ function AddMenu({ onClose, onSelectLive, onSelectTour }) {
 }
 
 // 新規追加用・保存してホームに戻るボタン（フィードバック付き）
-function AddSaveButton({ buildLive, onSaveAndClose }) {
-  const [state, setState] = useState("idle");
-
-  const handleClick = () => {
-    if (state !== "idle") return;
-    const l = buildLive();
-    setState("saving");
-    onSaveAndClose(null, l);
-    setTimeout(() => setState("done"), 400);
-  };
-
-  const label = state === "saving" ? "保存中…"
-              : state === "done"   ? "✓ 保存しました！"
-              : "🏠 保存してホームに戻る";
-
-  return (
-    <button
-      className={"save-btn" + (state !== "idle" ? " saving" : "")}
-      style={{marginBottom:24, ...(state === "done" ? {background:"linear-gradient(135deg,#2a8a3e,#1a6b2e)"} : {})}}
-      onClick={handleClick}
-    >
-      {label}
-    </button>
-  );
-}
-
-function AddForm({ onClose, onSaveAndClose, allTours }) {
+function AddForm({ user, onClose, allTours }) {
   const [step,      setStep]      = useState("select"); // "select" | "input"
   const [selTour,   setSelTour]   = useState(null);     // 選択されたツアーentry
   const [date,      setDate]      = useState("");
@@ -1948,27 +1932,30 @@ function AddForm({ onClose, onSaveAndClose, allTours }) {
   const [seatNo,    setSeatNo]    = useState("");
   const [mem,       setMem]       = useState({before:"",after:"",highlight:"",other:""});
   const [tipsText,  setTipsText]  = useState("");
-  const { photos, handleAdd, handleRemove, uploading } = usePhotoUpload([]);
+  const { photos, handleAdd, handleRemove, uploading, commit } = usePhotoUpload([], user.uid);
 
-  const buildLive = () => {
-    const songs = setlist.split("\n").map(l=>l.trim()).filter(Boolean).map((line,i) => {
-      const e = /アンコール/i.test(line);
-      const t = line.replace(/^\d+\.\s*/,"").replace(/\s*[[［]アンコール[\]］]/i,"");
-      return { n:i+1, t, ...(e?{e:true}:{}) };
-    });
-    const dateParts = date ? date.split("-") : ["","",""];
-    const [y,m,d] = dateParts;
-    const dateStr = date ? `${y}.${m}.${d}` : "日付未設定";
-    const dateLabelStr = date ? `${y}年${parseInt(m)}月${parseInt(d)}日` : "日付未設定";
-    return {
-      id:`user-${Date.now()}`, date:dateStr, dateLabel:dateLabelStr,
-      start:startTime, venue:venue.trim()||"会場未設定",
-      seat:[block,seatNo].filter(Boolean).join(" / 座席")||"未設定",
-      highlight:null, tag:(venue.trim()||"未設定").slice(0,3), emoji:"🎤",
-      songs, photos,
-      memory:{ before:mem.before.trim(), after:mem.after.trim(), highlight:mem.highlight.trim(), other:mem.other.trim() },
-      tips:parseTips(tipsText),
+  // 公演情報（共有）と自分の記録を同時に作成
+  const doSave = async () => {
+    const [y,m,d] = date ? date.split("-") : ["","",""];
+    const live = {
+      id: `user-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      tourId: selTour.id,
+      date:      date ? `${y}.${m}.${d}` : "日付未設定",
+      dateLabel: date ? `${y}年${parseInt(m)}月${parseInt(d)}日` : "日付未設定",
+      start: startTime, venue: venue.trim() || "会場未設定",
+      tag: (venue.trim() || "未設定").slice(0,3), emoji: "🎤",
+      songs: parseSetlist(setlist),
     };
+    const myEntry = {
+      seat: [block.trim(), seatNo.trim()].filter(Boolean).join(" / 座席"),
+      highlight: null,
+      photos,
+      memory: { before:mem.before.trim(), after:mem.after.trim(), highlight:mem.highlight.trim(), other:mem.other.trim() },
+      tips: parseTips(tipsText),
+    };
+    await createLive(user, live, myEntry);
+    commit(photos);
+    return true;
   };
 
   // ── ステップ1：ツアー選択 ──
@@ -2024,27 +2011,24 @@ function AddForm({ onClose, onSaveAndClose, allTours }) {
           <label className="flbl">会場</label>
           <input className="finp" placeholder="例: 東京ドーム" value={venue} onChange={e=>setVenue(e.target.value)}/>
         </div>
-        <div className="fdivider">セットリスト</div>
+        <div className="fdivider">セットリスト<span className="fscope">みんなで共有</span></div>
         <div className="fsec">
           <textarea className="finp" rows={5} placeholder={"1. Mirotic\n2. Rising Sun\n3. Before U Go  [アンコール]"} style={{resize:"none",lineHeight:1.8}} value={setlist} onChange={e=>setSetlist(e.target.value)}/>
         </div>
-        <div className="fdivider">座席</div>
+        <div className="fdivider">座席<span className="fscope mine">あなたの記録</span></div>
         <div className="fsec">
           <div className="frow">
             <div className="fgrp"><label className="flbl">ブロック / 列</label><input className="finp" placeholder="C列 12番" value={block} onChange={e=>setBlock(e.target.value)}/></div>
             <div className="fgrp"><label className="flbl">座席番号</label><input className="finp" placeholder="34" value={seatNo} onChange={e=>setSeatNo(e.target.value)}/></div>
           </div>
         </div>
-        <div className="fdivider">写真</div>
+        <div className="fdivider">写真<span className="fscope mine">あなたの記録</span></div>
         <PhotoEditor photos={photos} onAdd={handleAdd} onRemove={handleRemove} uploading={uploading}/>
-        <div className="fdivider">思い出メモ</div>
+        <div className="fdivider">思い出メモ<span className="fscope mine">あなたの記録</span></div>
         <MemInputs mem={mem} setMem={setMem}/>
-        <div className="fdivider">Live を楽しむための Tips</div>
+        <div className="fdivider">Live を楽しむための Tips<span className="fscope mine">あなたの記録</span></div>
         <TipsInput value={tipsText} onChange={e=>setTipsText(e.target.value)}/>
-        <AddSaveButton
-          buildLive={buildLive}
-          onSaveAndClose={(_, live) => onSaveAndClose(selTour, live)}
-        />
+        <SaveHomeButton doSave={doSave} onGoHome={onClose} disabled={uploading}/>
       </div>
     </div>
   );
@@ -2054,232 +2038,204 @@ function AddForm({ onClose, onSaveAndClose, allTours }) {
 //  メインアプリ
 // ─────────────────────────────────────────────
 
+// 全画面で共通のスタイルを読み込む
+const Shell = ({ children }) => <><style>{CSS}</style>{children}</>;
+
+// 公演の並び順：日付順（未設定は最後）→ 登録順
+const liveSortKey = (l) => (/^\d{4}\.\d{2}\.\d{2}$/.test(l.date || "") ? l.date : "9999");
+const compareLives = (a, b) =>
+  liveSortKey(a).localeCompare(liveSortKey(b)) || (a.order ?? 0) - (b.order ?? 0);
+
+const entryTime = (e) => e.updatedAt?.toMillis?.() ?? 0;
+
 export default function App() {
-  const [selected,    setSelected]    = useState(null);
+  const [authState, setAuthState] = useState({ loading: true, user: null });
+  useEffect(() => watchAuth(user => setAuthState({ loading: false, user })), []);
+
+  if (authState.loading) return <Shell><LoadingScreen/></Shell>;
+  if (!authState.user)   return <Shell><LoginScreen/></Shell>;
+  return <Shell><MemberGate key={authState.user.uid} user={authState.user}/></Shell>;
+}
+
+// 招待メンバーかどうかを確認する（招待されていない人は config/members を読めない）
+function MemberGate({ user }) {
+  const isOwner = isOwnerEmail(user.email);
+  const [members, setMembers] = useState({ status: "loading", emails: [] });
+
+  useEffect(() => subscribeMembers(
+    emails => setMembers({ status: "ok", emails }),
+    err => {
+      console.error("メンバー情報の取得に失敗:", err);
+      setMembers({ status: err.code === "permission-denied" ? "denied" : "error", emails: [] });
+    },
+  ), []);
+
+  if (members.status === "loading") return <LoadingScreen message="メンバーを確認しています…"/>;
+  if (members.status === "denied")  return <NotInvitedScreen user={user}/>;
+  if (members.status === "error")   return <MessageScreen message={"データの読み込みに失敗しました。\n接続を確認してください。"}/>;
+  // 一覧から外されたメンバーは、ルール上データを読めなくなる
+  if (!isOwner && !members.emails.includes(normalizeEmail(user.email))) return <NotInvitedScreen user={user}/>;
+  return <Archive user={user} isOwner={isOwner} members={members.emails}/>;
+}
+
+function Archive({ user, isOwner, members }) {
+  const [tours,   setTours]   = useState(null);
+  const [lives,   setLives]   = useState(null);
+  const [entries, setEntries] = useState(null);
+  const [error,   setError]   = useState(null);
+  const [migrating, setMigrating] = useState(isOwner);
+
+  const [selectedId,  setSelectedId]  = useState(null);
   const [showMenu,    setShowMenu]    = useState(false);
   const [showAdd,     setShowAdd]     = useState(false);
   const [showAddTour, setShowAddTour] = useState(false);
-  const [allLives,    setAllLives]    = useState([]);
-  const [loading,     setLoading]     = useState(true);
-  const [error,       setError]       = useState(null);
+  const [showMembers, setShowMembers] = useState(false);
 
-  // 起動時にFirestoreからデータを取得
+  // オーナーの初回ログイン時に、旧データ(archive/allLives)を新しい構造へ移行
   useEffect(() => {
-    (async () => {
-      try {
-        const lives = await loadFromFirestore();
-        if (lives) {
-          setAllLives(lives);
-        } else {
-          // 初回：初期データをFirestoreに書き込む
-          const initial = buildInitialAllLives();
-          await saveToFirestore(initial);
-          setAllLives(initial);
-        }
-      } catch (err) {
-        console.error("Firestoreの読み込みに失敗:", err);
-        setError("データの読み込みに失敗しました。接続を確認してください。");
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
+    if (!isOwner) return;
+    let alive = true;
+    migrateLegacyIfNeeded(user, buildInitialAllLives)
+      .catch(err => {
+        console.error("データ移行に失敗:", err);
+        if (alive) setError("データの移行に失敗しました。ページを再読み込みしてください。");
+      })
+      .finally(() => { if (alive) setMigrating(false); });
+    return () => { alive = false; };
+  }, [isOwner, user]);
 
-  // allLivesからツアーカード用の構造を組み立てる
+  // リアルタイム購読：他のメンバーの変更もすぐに画面へ反映される
+  useEffect(() => subscribeArchive({
+    onTours: setTours, onLives: setLives, onEntries: setEntries,
+    onError: err => {
+      console.error("データの購読に失敗:", err);
+      setError("データの読み込みに失敗しました。接続を確認してください。");
+    },
+  }), []);
+
   const allTours = useMemo(() => {
+    if (!tours || !lives) return [];
+    const byTour = new Map(tours.map(t => [t.id, { ...t, lives: [] }]));
+    [...lives].sort(compareLives).forEach(l => byTour.get(l.tourId)?.lives.push(l));
+    return [...byTour.values()].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  }, [tours, lives]);
+
+  // 公演ごとの記録（自分の記録が先頭、あとは更新が新しい順）
+  const entriesByLive = useMemo(() => {
     const map = new Map();
-    allLives.forEach(entry => {
-      if (!map.has(entry.tourId)) {
-        map.set(entry.tourId, {
-          id:       entry.tourId,
-          name:     entry.tourName,
-          sub:      entry.tourSub,
-          color:    entry.tourColor,
-          featured: entry.featured,
-          svgCode:  entry.svgCode || null,
-          lives:    [],
-        });
-      }
-      map.get(entry.tourId).lives.push(entry.live);
+    (entries || []).forEach(e => {
+      if (!map.has(e.liveId)) map.set(e.liveId, []);
+      map.get(e.liveId).push(e);
     });
-    return Array.from(map.values());
-  }, [allLives]);
+    map.forEach(list => list.sort((a, b) =>
+      (b.uid === user.uid) - (a.uid === user.uid) || entryTime(b) - entryTime(a)));
+    return map;
+  }, [entries, user.uid]);
 
-  const totalLives = allTours.reduce((s,t) => s + t.lives.length, 0);
-  const totalSongs = allTours.reduce((s,t) => s + t.lives.reduce((ss,l) => ss + l.songs.length, 0), 0);
+  if (error) return <MessageScreen message={error}/>;
+  if (migrating || !tours || !lives || !entries) return <LoadingScreen/>;
 
-  // Firestoreに保存してstateも更新
-  const persist = async (updated) => {
-    setAllLives(updated);
-    try { await saveToFirestore(updated); }
+  const selectedTour = selectedId && allTours.find(t => t.lives.some(l => l.id === selectedId));
+  const selectedLive = selectedTour && selectedTour.lives.find(l => l.id === selectedId);
+
+  const totalLives = lives.length;
+  const totalSongs = lives.reduce((s, l) => s + (l.songs || []).length, 0);
+
+  const run = async (fn, message) => {
+    try { await fn(); }
     catch (err) {
-      console.error("Firestoreへの保存に失敗:", err);
-      alert("保存に失敗しました。通信状況を確認してください。");
+      console.error(message, err);
+      alert(`${message}通信状況を確認して、もう一度お試しください。`);
     }
   };
 
-  // 新規ライブ追加（selTourはallToursのtourオブジェクト）
-  const handleSave = (selTour, newLive) => {
-    const entry = {
-      tourId:    selTour.id,
-      tourName:  selTour.name,
-      tourSub:   selTour.sub   || null,
-      tourColor: selTour.color,
-      featured:  selTour.featured || false,
-      svgCode:   selTour.svgCode  || null,
-      live:      newLive,
-    };
-    persist([...allLives, entry]);
-  };
-
-  // ライブ削除
-  const handleLiveDelete = (liveId) => {
-    const removed = allLives.filter(entry => entry.live.id === liveId);
-    const updated = allLives.filter(entry => entry.live.id !== liveId);
-    persist(updated);
-    deletePhotos(removed.flatMap(entry => entry.live.photos || []));
-  };
-
-  // ツアー削除（ツアー内の全ライブも削除）
-  const handleTourDelete = (tourId) => {
-    const removed = allLives.filter(entry => entry.tourId === tourId);
-    const updated = allLives.filter(entry => entry.tourId !== tourId);
-    persist(updated);
-    deletePhotos(removed.flatMap(entry => entry.live.photos || []));
-  };
-
-  const handleTourUpdate = (tourId, changes) => {
-    const updated = allLives.map(entry =>
-      entry.tourId === tourId
-        ? { ...entry,
-            tourName:  changes.tourName  ?? entry.tourName,
-            tourSub:   changes.tourSub   !== undefined ? changes.tourSub  : entry.tourSub,
-            tourColor: changes.tourColor ?? entry.tourColor,
-            svgCode:   changes.svgCode   !== undefined ? changes.svgCode  : entry.svgCode,
-          }
-        : entry
-    );
-    persist(updated);
-  };
-
-  // ツアー新規追加（ライブ0件で作成）
+  const handleLiveDelete = (liveId) =>
+    run(() => deleteLive(liveId, entries), "削除に失敗しました。");
+  const handleTourDelete = (tourId) =>
+    run(() => deleteTour(tourId, lives, entries), "削除に失敗しました。");
+  const handleTourUpdate = (tourId, changes) =>
+    run(() => updateTour(user, tourId, changes), "保存に失敗しました。");
   const handleTourSave = (tourMeta) => {
-    // ダミーライブ1件を入れてツアーを成立させる（ライブ0件だとallToursに表示されない）
-    const dummyLive = {
-      id: `live-placeholder-${Date.now()}`,
-      date: "未設定", dateLabel: "未設定",
-      open: "", start: "", venue: "未設定",
-      seat: "未設定", highlight: null,
-      tag: "未", emoji: "🎤",
-      songs: [], photos: [],
-      memory: { before:"", after:"", highlight:"", other:"" },
-      tips: [],
-    };
-    const entry = { ...tourMeta, live: dummyLive };
-    persist([...allLives, entry]);
+    run(() => createTour(user, tourMeta), "保存に失敗しました。");
     setShowAddTour(false);
   };
-  const handleUpdate = (liveId, changes) => {
-    if (changes.photos) {
-      const before = allLives.find(entry => entry.live.id === liveId)?.live.photos || [];
-      deletePhotos(before.filter(p => !changes.photos.includes(p)));
-    }
-    const updated = allLives.map(entry =>
-      entry.live.id === liveId
-        ? { ...entry, live: { ...entry.live, ...changes } }
-        : entry
-    );
-    persist(updated);
-    if (selected && selected.live.id === liveId) {
-      setSelected(prev => ({ ...prev, live: { ...prev.live, ...changes } }));
-    }
-  };
-
-  if (loading) return (
-    <>
-      <style>{CSS}</style>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh",flexDirection:"column",gap:16,background:"var(--paper)"}}>
-        <div style={{color:"var(--red)",fontSize:28}}>♪</div>
-        <div style={{fontFamily:"Noto Serif JP,serif",fontSize:14,color:"rgba(28,10,12,.5)",letterSpacing:".12em"}}>読み込み中…</div>
-      </div>
-    </>
-  );
-
-  if (error) return (
-    <>
-      <style>{CSS}</style>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh",flexDirection:"column",gap:12,padding:24,background:"var(--paper)"}}>
-        <div style={{color:"var(--red)",fontSize:14,textAlign:"center",lineHeight:1.8}}>{error}</div>
-      </div>
-    </>
-  );
 
   return (
-    <>
-      <style>{CSS}</style>
-      <div className="app">
-        <div className="hdr">
-          <div className="hdr-vis">
-            <div className="hdr-aktf"><span>Always Keep the Faith</span></div>
-            <div className="hdr-tdots">
-              {T_DOTS.map(({key,lit,color}) => (
-                <div key={key} className="hdr-dot" style={{background:lit?color:"rgba(255,255,255,.04)",opacity:lit?.8:1}}/>
-              ))}
-            </div>
-            <Silhouette/>
+    <div className="app">
+      <div className="hdr">
+        <div className="hdr-vis">
+          <div className="hdr-aktf"><span>Always Keep the Faith</span></div>
+          <div className="hdr-tdots">
+            {T_DOTS.map(({key,lit,color}) => (
+              <div key={key} className="hdr-dot" style={{background:lit?color:"rgba(255,255,255,.04)",opacity:lit?.8:1}}/>
+            ))}
           </div>
-          <div className="hdr-body">
-            <div className="hdr-sub">東方神起 - TVXQ! LIVE ARCHIVE</div>
-            <div className="hdr-row">
-              <div className="stats">
-                <div><div className="stat-n">{totalLives}</div><div className="stat-l">LIVES</div></div>
-                <div><div className="stat-n">{totalSongs}</div><div className="stat-l">SONGS</div></div>
-                <div><div className="stat-n">{allTours.length}</div><div className="stat-l">TOURS</div></div>
-              </div>
-              <button className="add-btn" onClick={() => { setShowMenu(true); setSelected(null); }}>＋</button>
+          <Silhouette/>
+        </div>
+        <div className="hdr-body">
+          <div className="hdr-sub">東方神起 - TVXQ! LIVE ARCHIVE</div>
+          <UserBar user={user} isOwner={isOwner} onOpenMembers={() => setShowMembers(true)}/>
+          <div className="hdr-row">
+            <div className="stats">
+              <div><div className="stat-n">{totalLives}</div><div className="stat-l">LIVES</div></div>
+              <div><div className="stat-n">{totalSongs}</div><div className="stat-l">SONGS</div></div>
+              <div><div className="stat-n">{allTours.length}</div><div className="stat-l">TOURS</div></div>
+              <div><div className="stat-n">{members.length + 1}</div><div className="stat-l">MEMBERS</div></div>
             </div>
+            <button className="add-btn" onClick={() => { setShowMenu(true); setSelectedId(null); }}>＋</button>
           </div>
         </div>
-        <div className="content">
-          <div className="sec-lbl">ツアー</div>
-          {allTours.map(tour => (
-            <TourCard key={tour.id} tour={tour}
-              onLiveSelect={(live, tour) => { setSelected({ live, tour }); setShowMenu(false); }}
-              onLiveDelete={handleLiveDelete}
-              onTourDelete={handleTourDelete}
-              onTourUpdate={handleTourUpdate}
-            />
-          ))}
-        </div>
-        {selected && (
-          <LiveModal
-            live={selected.live}
-            tour={selected.tour}
-            onClose={() => setSelected(null)}
-            onUpdate={handleUpdate}
-          />
-        )}
-        {showMenu && (
-          <AddMenu
-            onClose={() => setShowMenu(false)}
-            onSelectLive={() => { setShowMenu(false); setShowAdd(true); }}
-            onSelectTour={() => { setShowMenu(false); setShowAddTour(true); }}
-          />
-        )}
-        {showAdd && (
-          <AddForm
-            onClose={() => setShowAdd(false)}
-            onSaveAndClose={(selTour, newLive) => { handleSave(selTour, newLive); setShowAdd(false); }}
-            allTours={allTours}
-          />
-        )}
-        {showAddTour && (
-          <AddTourForm
-            onClose={() => setShowAddTour(false)}
-            onSaveTour={handleTourSave}
-          />
-        )}
       </div>
-    </>
+      <div className="content">
+        <div className="sec-lbl">ツアー</div>
+        {allTours.length === 0 && (
+          <div className="empty" style={{fontSize:13,padding:"8px 2px"}}>まだツアーがありません。右上の「＋」から追加できます。</div>
+        )}
+        {allTours.map(tour => (
+          <TourCard key={tour.id} tour={tour}
+            isOwner={isOwner}
+            myUid={user.uid}
+            entriesByLive={entriesByLive}
+            onLiveSelect={(live) => { setSelectedId(live.id); setShowMenu(false); }}
+            onLiveDelete={handleLiveDelete}
+            onTourDelete={handleTourDelete}
+            onTourUpdate={handleTourUpdate}
+          />
+        ))}
+      </div>
+      {selectedLive && (
+        <LiveModal
+          key={selectedLive.id}
+          live={selectedLive}
+          tour={selectedTour}
+          entries={entriesByLive.get(selectedLive.id) || []}
+          user={user}
+          onClose={() => setSelectedId(null)}
+        />
+      )}
+      {showMenu && (
+        <AddMenu
+          onClose={() => setShowMenu(false)}
+          onSelectLive={() => { setShowMenu(false); setShowAdd(true); }}
+          onSelectTour={() => { setShowMenu(false); setShowAddTour(true); }}
+        />
+      )}
+      {showAdd && (
+        <AddForm
+          user={user}
+          onClose={() => setShowAdd(false)}
+          allTours={allTours}
+        />
+      )}
+      {showAddTour && (
+        <AddTourForm
+          onClose={() => setShowAddTour(false)}
+          onSaveTour={handleTourSave}
+        />
+      )}
+      {showMembers && isOwner && (
+        <MembersDialog members={members} onClose={() => setShowMembers(false)}/>
+      )}
+    </div>
   );
 }

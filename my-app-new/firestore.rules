@@ -1,0 +1,86 @@
+rules_version = '2';
+
+// TVXQ LIVE ARCHIVE — Firestore セキュリティルール
+//
+// ・見る／書けるのは「オーナー」と「招待メンバー(config/members)」だけ
+// ・公演情報（ツアー・日付・会場・セットリスト）はメンバー全員で編集できる
+// ・一人ひとりの記録（entries）と写真（photos）は本人だけが書き換えられる
+// ・ツアー／公演の削除とメンバー管理はオーナーだけ
+//
+// OWNER_EMAIL は src/lib/firebase.js の OWNER_EMAIL と必ず同じにすること。
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function ownerEmail() { return 'hase.stay.green.0122@gmail.com'; }
+
+    function signedIn() {
+      return request.auth != null
+        && request.auth.token.email != null
+        && request.auth.token.email_verified == true;
+    }
+    function myEmail() { return request.auth.token.email.lower(); }
+    function isOwner() { return signedIn() && myEmail() == ownerEmail(); }
+    function membersPath() { return /databases/$(database)/documents/config/members; }
+    function isMember() {
+      return isOwner()
+        || (signedIn()
+            && exists(membersPath())
+            && myEmail() in get(membersPath()).data.emails);
+    }
+    function isMine(data) { return data.uid == request.auth.uid; }
+
+    // ── 設定 ──
+    match /config/members {
+      allow read:  if isMember();
+      allow write: if isOwner()
+        && request.resource.data.emails is list;
+    }
+    match /config/migration {
+      allow read:  if isMember();
+      allow write: if isOwner();
+    }
+
+    // ── 旧データ（移行元・バックアップとして読み取り専用で保持） ──
+    match /archive/{docId} {
+      allow read:  if isOwner();
+      allow write: if false;
+    }
+
+    // ── ツアー・公演（メンバー共有） ──
+    match /tours/{tourId} {
+      allow read:           if isMember();
+      allow create, update: if isMember();
+      allow delete:         if isOwner();
+    }
+    match /lives/{liveId} {
+      allow read:           if isMember();
+      allow create:         if isMember() && request.resource.data.tourId is string;
+      allow update:         if isMember();
+      allow delete:         if isOwner();
+    }
+
+    // ── 一人ひとりの記録：ドキュメントIDは「{liveId}_{uid}」 ──
+    match /entries/{entryId} {
+      allow read: if isMember();
+      allow create, update: if isMember()
+        && isMine(request.resource.data)
+        && entryId == request.resource.data.liveId + '_' + request.auth.uid;
+      allow delete: if isMember() && (isMine(resource.data) || isOwner());
+    }
+
+    // ── 写真（1枚1ドキュメント、圧縮済みのbase64） ──
+    match /photos/{photoId} {
+      allow read:   if isMember();
+      allow create: if isMember()
+        && isMine(request.resource.data)
+        && request.resource.data.data is string
+        && request.resource.data.data.size() < 1000000;
+      allow update: if false;
+      // 旧データ由来の写真(uidなし)はオーナーが削除できる
+      allow delete: if isMember() && (isOwner() || resource.data.get('uid', '') == request.auth.uid);
+    }
+
+    // それ以外はすべて拒否
+  }
+}
