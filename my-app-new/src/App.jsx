@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+import { getFirestore, doc, getDoc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ─────────────────────────────────────────────
 //  Firebase 初期化
@@ -18,7 +17,6 @@ const firebaseConfig = {
 
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getFirestore(firebaseApp);
-const storage = getStorage(firebaseApp);
 const DOC_REF = doc(db, "archive", "allLives");
 
 const loadFromFirestore = async () => {
@@ -29,6 +27,78 @@ const loadFromFirestore = async () => {
 
 const saveToFirestore = async (lives) => {
   await setDoc(DOC_REF, { lives });
+};
+
+// ─────────────────────────────────────────────
+//  写真（Firestoreに1枚1ドキュメントで保存）
+//  Firebase Storageは有料プラン必須のため、ブラウザで圧縮して
+//  photos/{id} に base64 で保存し、ライブ側には "fsphoto:{id}" だけを持たせる
+// ─────────────────────────────────────────────
+
+const PHOTO_COL    = "photos";
+const PHOTO_PREFIX = "fsphoto:";
+const PHOTO_MAX_SIDE  = 1280;
+const PHOTO_MAX_CHARS = 900_000; // Firestoreの1ドキュメント上限(1MiB)に余裕を持たせる
+
+const isStoredPhoto = (p) => typeof p === "string" && p.startsWith(PHOTO_PREFIX);
+const isDirectPhoto = (p) => typeof p === "string" && (p.startsWith("data:") || p.startsWith("http"));
+
+const photoCache = new Map(); // id -> Promise<string|null>
+
+const loadPhoto = (id) => {
+  if (!photoCache.has(id)) {
+    photoCache.set(id, getDoc(doc(db, PHOTO_COL, id))
+      .then(snap => (snap.exists() ? snap.data().data : null))
+      .catch(err => { console.error("写真の読み込みに失敗:", err); photoCache.delete(id); return null; }));
+  }
+  return photoCache.get(id);
+};
+
+const loadImageElement = (file) => new Promise((resolve, reject) => {
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload  = () => { URL.revokeObjectURL(url); resolve(img); };
+  img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("画像を読み込めませんでした")); };
+  img.src = url;
+});
+
+// 長辺を縮小しつつ、JPEG品質を下げてサイズ上限に収める
+const compressImage = async (file) => {
+  const img = await loadImageElement(file);
+  let side = PHOTO_MAX_SIDE;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const scale  = Math.min(1, side / Math.max(img.naturalWidth, img.naturalHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width  = Math.max(1, Math.round(img.naturalWidth  * scale));
+    canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#fff"; // 透過PNG対策
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    for (const q of [0.82, 0.7, 0.55]) {
+      const dataUrl = canvas.toDataURL("image/jpeg", q);
+      if (dataUrl.length <= PHOTO_MAX_CHARS) return dataUrl;
+    }
+    side = Math.round(side * 0.7);
+  }
+  throw new Error("画像が大きすぎて圧縮できませんでした");
+};
+
+const uploadPhoto = async (file) => {
+  const data = await compressImage(file);
+  const id = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  await setDoc(doc(db, PHOTO_COL, id), { data, createdAt: Date.now() });
+  photoCache.set(id, Promise.resolve(data));
+  return PHOTO_PREFIX + id;
+};
+
+const deletePhotos = async (refs) => {
+  const ids = (refs || []).filter(isStoredPhoto).map(r => r.slice(PHOTO_PREFIX.length));
+  await Promise.all(ids.map(async (id) => {
+    photoCache.delete(id);
+    try { await deleteDoc(doc(db, PHOTO_COL, id)); }
+    catch (err) { console.error("写真の削除に失敗:", err); }
+  }));
 };
 
 // ─────────────────────────────────────────────
@@ -572,7 +642,7 @@ const CSS = `
 //  ユーティリティ
 // ─────────────────────────────────────────────
 
-function usePhotoUpload(initial = [], liveId = "unknown") {
+function usePhotoUpload(initial = []) {
   const [photos,    setPhotos]    = useState(initial);
   const [uploading, setUploading] = useState(false);
 
@@ -582,14 +652,11 @@ function usePhotoUpload(initial = [], liveId = "unknown") {
     if (!files.length) return;
     setUploading(true);
     try {
-      const urls = await Promise.all(files.map(async (file) => {
-        const path = `photos/${liveId}/${Date.now()}_${file.name}`;
-        const ref = storageRef(storage, path);
-        await uploadBytes(ref, file);
-        return await getDownloadURL(ref);
-      }));
-      setPhotos(prev => [...prev, ...urls].slice(0, 6));
+      const room = Math.max(0, 6 - photos.length);
+      const refs = await Promise.all(files.slice(0, room).map(uploadPhoto));
+      setPhotos(prev => [...prev, ...refs].slice(0, 6));
     } catch (err) {
+      console.error("写真のアップロードに失敗:", err);
       alert("写真のアップロードに失敗しました。もう一度お試しください。");
     } finally {
       setUploading(false);
@@ -622,16 +689,31 @@ const getTourPeriod = (lives) => {
 //  共通サブコンポーネント
 // ─────────────────────────────────────────────
 
+function PhotoImg({ src, size }) {
+  const [loaded, setLoaded] = useState({ src: null, url: null });
+  useEffect(() => {
+    if (!isStoredPhoto(src)) return;
+    let alive = true;
+    loadPhoto(src.slice(PHOTO_PREFIX.length)).then(url => { if (alive) setLoaded({ src, url }); });
+    return () => { alive = false; };
+  }, [src]);
+
+  if (isDirectPhoto(src)) return <img src={src} alt=""/>;
+  const box = { width:size||"100%", height:size||"100%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:size?24:13, color:"rgba(28,10,12,.35)" };
+  if (isStoredPhoto(src)) {
+    if (loaded.src !== src) return <div style={box}>…</div>;
+    return loaded.url ? <img src={loaded.url} alt=""/> : <div style={box}>⚠️</div>;
+  }
+  return <div style={{...box, background:size?"var(--mist)":undefined, borderRadius:size?8:undefined}}>{src}</div>;
+}
+
 function PhotoEditor({ photos, onAdd, onRemove, uploading }) {
   return (
     <div className="fsec">
       <div style={{ display:"flex", gap:10, flexWrap:"wrap", marginBottom:8 }}>
         {photos.map((p, i) => (
           <div key={i} className="photo-thumb">
-            {(p.startsWith("data:") || p.startsWith("http"))
-              ? <img src={p} alt=""/>
-              : <div style={{width:80,height:80,borderRadius:8,background:"var(--mist)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:24}}>{p}</div>
-            }
+            <PhotoImg src={p} size={80}/>
             <button className="photo-del" onClick={() => onRemove(i)}>×</button>
           </div>
         ))}
@@ -770,7 +852,6 @@ function TourCard({ tour, onLiveSelect, onLiveDelete, onTourDelete, onTourUpdate
   const [delTarget, setDelTarget] = useState(null);
   const [delTour, setDelTour] = useState(false);
   const [editTour, setEditTour] = useState(false);
-  const totalSongs = tour.lives.reduce((s,l) => s+l.songs.length, 0);
   const period = getTourPeriod(tour.lives);
   const ROD = ["#e8112d","#c0152a","#ff3355","#d42035","#ff1a40","#b00d22"];
 
@@ -907,14 +988,13 @@ function TourCard({ tour, onLiveSelect, onLiveDelete, onTourDelete, onTourUpdate
 }
 
 function Setlist({ songs }) {
-  let shown = false;
+  const firstEncore = songs.findIndex(s => s.e);
   return (
     <ul className="setlist">
-      {songs.map(s => {
+      {songs.map((s, i) => {
         const enc = !!s.e;
         let div = null;
-        if (enc && !shown) {
-          shown = true;
+        if (i === firstEncore) {
           div = <li key="enc"><div className="enc-div"><div className="enc-line"/><span className="enc-lbl">― アンコール ―</span><div className="enc-line"/></div></li>;
         }
         return [div, <li key={s.n} className="sl-item"><span className="sl-num">{s.n}</span><div className="sl-name">{s.t}</div>{enc&&<span className="sl-enc">ENCORE</span>}</li>];
@@ -1032,7 +1112,7 @@ function LiveModal({ live:liveProp, tour, onClose, onUpdate }) {
           <div className="photos">
             {(live.photos||[]).map((p,i) => (
               <div key={i} className="photo">
-                {(p.startsWith("data:")||p.startsWith("http")) ? <img src={p} alt=""/> : p}
+                <PhotoImg src={p}/>
               </div>
             ))}
           </div>
@@ -1087,12 +1167,12 @@ function EditForm({ live, onClose, onGoHome, onUpdate }) {
   const [setlist, setSetlist]   = useState((live.songs||[]).map((s,i) => `${i+1}. ${s.t}${s.e?" [アンコール]":""}`).join("\n"));
   const [mem, setMem]           = useState(live.memory||{before:"",after:"",highlight:"",other:""});
   const [tipsText, setTipsText] = useState(tipsToText(live.tips));
-  const { photos, handleAdd, handleRemove, uploading } = usePhotoUpload(live.photos||[], live.id);
+  const { photos, handleAdd, handleRemove, uploading } = usePhotoUpload(live.photos||[]);
 
   const doSave = () => {
     const songs = setlist.split("\n").map(l=>l.trim()).filter(Boolean).map((line,i) => {
       const e = /アンコール/i.test(line);
-      const t = line.replace(/^\d+\.\s*/,"").replace(/\s*[\[［]アンコール[\]］]/i,"");
+      const t = line.replace(/^\d+\.\s*/,"").replace(/\s*[[［]アンコール[\]］]/i,"");
       return { n:i+1, t, ...(e?{e:true}:{}) };
     });
     onUpdate(live.id, { seat, songs, photos, memory:mem, tips:parseTips(tipsText) });
@@ -1522,7 +1602,7 @@ function generateTourVisual(pat1id, pat2id, color) {
   return combineTwoPatterns(p1, p2, color);
 }
 
-function TourVisPreviewDialog({ tourName, tourSub, svgCode, onRetry, onConfirm }) {
+function TourVisPreviewDialog({ tourSub, svgCode, onRetry, onConfirm }) {
   return (
     <div className="preview-overlay" onClick={e => e.stopPropagation()}>
       <div className="preview-dialog">
@@ -1868,12 +1948,12 @@ function AddForm({ onClose, onSaveAndClose, allTours }) {
   const [seatNo,    setSeatNo]    = useState("");
   const [mem,       setMem]       = useState({before:"",after:"",highlight:"",other:""});
   const [tipsText,  setTipsText]  = useState("");
-  const { photos, handleAdd, handleRemove, uploading } = usePhotoUpload([], `new-${Date.now()}`);
+  const { photos, handleAdd, handleRemove, uploading } = usePhotoUpload([]);
 
   const buildLive = () => {
     const songs = setlist.split("\n").map(l=>l.trim()).filter(Boolean).map((line,i) => {
       const e = /アンコール/i.test(line);
-      const t = line.replace(/^\d+\.\s*/,"").replace(/\s*[\[［]アンコール[\]］]/i,"");
+      const t = line.replace(/^\d+\.\s*/,"").replace(/\s*[[［]アンコール[\]］]/i,"");
       return { n:i+1, t, ...(e?{e:true}:{}) };
     });
     const dateParts = date ? date.split("-") : ["","",""];
@@ -1996,7 +2076,8 @@ export default function App() {
           await saveToFirestore(initial);
           setAllLives(initial);
         }
-      } catch (e) {
+      } catch (err) {
+        console.error("Firestoreの読み込みに失敗:", err);
         setError("データの読み込みに失敗しました。接続を確認してください。");
       } finally {
         setLoading(false);
@@ -2030,7 +2111,11 @@ export default function App() {
   // Firestoreに保存してstateも更新
   const persist = async (updated) => {
     setAllLives(updated);
-    try { await saveToFirestore(updated); } catch {}
+    try { await saveToFirestore(updated); }
+    catch (err) {
+      console.error("Firestoreへの保存に失敗:", err);
+      alert("保存に失敗しました。通信状況を確認してください。");
+    }
   };
 
   // 新規ライブ追加（selTourはallToursのtourオブジェクト）
@@ -2049,14 +2134,18 @@ export default function App() {
 
   // ライブ削除
   const handleLiveDelete = (liveId) => {
+    const removed = allLives.filter(entry => entry.live.id === liveId);
     const updated = allLives.filter(entry => entry.live.id !== liveId);
     persist(updated);
+    deletePhotos(removed.flatMap(entry => entry.live.photos || []));
   };
 
   // ツアー削除（ツアー内の全ライブも削除）
   const handleTourDelete = (tourId) => {
+    const removed = allLives.filter(entry => entry.tourId === tourId);
     const updated = allLives.filter(entry => entry.tourId !== tourId);
     persist(updated);
+    deletePhotos(removed.flatMap(entry => entry.live.photos || []));
   };
 
   const handleTourUpdate = (tourId, changes) => {
@@ -2091,6 +2180,10 @@ export default function App() {
     setShowAddTour(false);
   };
   const handleUpdate = (liveId, changes) => {
+    if (changes.photos) {
+      const before = allLives.find(entry => entry.live.id === liveId)?.live.photos || [];
+      deletePhotos(before.filter(p => !changes.photos.includes(p)));
+    }
     const updated = allLives.map(entry =>
       entry.live.id === liveId
         ? { ...entry, live: { ...entry.live, ...changes } }
