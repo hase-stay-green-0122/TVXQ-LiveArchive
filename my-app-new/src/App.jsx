@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { isOwnerEmail, normalizeEmail, watchAuth } from "./lib/firebase.js";
+import { isOwnerEmail, normalizeEmail, watchAuth, PREVIEW_HOST } from "./lib/firebase.js";
 import { subscribeMembers, subscribeArchive, migrateLegacyIfNeeded, createTour, updateTour, deleteTour, deleteLive } from "./lib/store.js";
 import { AddMenu, AddForm } from "./components/AddForms.jsx";
 import { LoadingScreen, MessageScreen, LoginScreen, NotInvitedScreen, UserBar, MembersDialog } from "./components/Auth.jsx";
@@ -16,7 +16,18 @@ import { CSS } from "./styles.js";
 // ─────────────────────────────────────────────
 
 // 全画面で共通のスタイルを読み込む
-const Shell = ({ children }) => <><style>{CSS}</style>{children}</>;
+const Shell = ({ children }) => <><style>{CSS}</style><PreviewBanner/>{children}</>;
+
+// 公開前の確認用プレビューでは、本番と同じデータを触っていることがわかるように帯を出す
+const isPreview = typeof location !== "undefined" && location.hostname === PREVIEW_HOST;
+function PreviewBanner() {
+  if (!isPreview) return null;
+  return (
+    <div style={{position:"sticky",top:0,zIndex:300,background:"#d4a843",color:"#1c0a0c",fontSize:11,textAlign:"center",padding:"4px 8px",letterSpacing:".05em"}}>
+      プレビュー版（公開前の確認用）・データは本番と共通です
+    </div>
+  );
+}
 
 // 公演の並び順：日付順（未設定は最後）→ 登録順
 const liveSortKey = (l) => (/^\d{4}\.\d{2}\.\d{2}$/.test(l.date || "") ? l.date : "9999");

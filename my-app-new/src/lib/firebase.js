@@ -12,10 +12,13 @@ import {
 // （vercel.json で firebaseapp.com へ中継）。iPhone の Safari などは、別ドメインをまたぐ
 // ログインの途中情報を消してしまい「missing initial state」エラーになるため。
 // 中継先の URL は Google Cloud の OAuth クライアントに「承認済みのリダイレクト URI」として
-// 登録が必要（FIREBASE_SETUP.md 参照）。それ以外の環境（プレビュー・開発）は従来どおり。
-const PRODUCTION_HOST = "tvxq-live-archive.vercel.app";
-const authDomain = typeof location !== "undefined" && location.hostname === PRODUCTION_HOST
-  ? PRODUCTION_HOST
+// 登録が必要（FIREBASE_SETUP.md 参照）。
+// 対象は本番と、公開前の確認用の固定プレビュー（preview ブランチ）。それ以外の環境（開発など）は従来どおり。
+export const PRODUCTION_HOST = "tvxq-live-archive.vercel.app";
+export const PREVIEW_HOST    = "tvxq-live-archive-preview.vercel.app";
+const SAME_ORIGIN_AUTH_HOSTS = [PRODUCTION_HOST, PREVIEW_HOST];
+const authDomain = typeof location !== "undefined" && SAME_ORIGIN_AUTH_HOSTS.includes(location.hostname)
+  ? location.hostname
   : "tvxq-live-archive.firebaseapp.com";
 
 const firebaseConfig = {

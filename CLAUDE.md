@@ -22,7 +22,7 @@
   - `FIREBASE_SETUP.md`：Firebase コンソールで行う設定の手順（オーナー向け）
 - `.github/workflows/ci.yml`：CI とルールの自動反映
 
-ログインは、本番（`tvxq-live-archive.vercel.app`）では `authDomain` をアプリ自身のドメインにしている。`vercel.json` で `/__/auth/*` と `/__/firebase/*` を `tvxq-live-archive.firebaseapp.com` に中継し、iPhone の Safari で起きる `missing initial state` エラーを避けている。Google Cloud の OAuth クライアントに、リダイレクト URI `https://tvxq-live-archive.vercel.app/__/auth/handler` の登録が必要。
+ログインは、本番（`tvxq-live-archive.vercel.app`）と固定プレビュー（`tvxq-live-archive-preview.vercel.app`）では `authDomain` をアプリ自身のドメインにしている。`vercel.json` で `/__/auth/*` と `/__/firebase/*` を `tvxq-live-archive.firebaseapp.com` に中継し、iPhone の Safari で起きる `missing initial state` エラーを避けている。Google Cloud の OAuth クライアントに、両方のドメインの `/__/auth/handler` をリダイレクト URI として登録する必要がある。Firebase の承認済みドメインにも両方を登録する。
 
 Firebase の SDK は npm ではなく、gstatic の CDN（`https://www.gstatic.com/firebasejs/10.12.0/...`）から直接 import している。バージョンを上げるときは、すべての import を同時に変えること。
 
@@ -71,6 +71,8 @@ npm run test:e2e    # E2E だけ
 - `main` に push すると、**Vercel が本番（https://tvxq-live-archive.vercel.app）に自動でデプロイ**する。ほかのブランチはプレビュー版としてデプロイされる。
 - `main` に push すると、GitHub Actions がテストを通したうえで、**`firestore.rules` を本番に自動で反映**する（シークレット `FIREBASE_SERVICE_ACCOUNT` が必要）。
 - そのため、**`main` に入れたものはすぐ本番に出る。** 作業はブランチで行い、オーナーの了承を得てから `main` に入れる。
+- **公開前の確認には、固定のプレビュー URL（https://tvxq-live-archive-preview.vercel.app）を使う。** 確認してほしい内容を `preview` ブランチに push すると、そこにデプロイされる。通常は `main` から作業ブランチを切り、`git push origin HEAD:preview` で載せる（早送りできる場合）。早送りできない（履歴が分かれた）場合に `preview` を上書きするのは強制 push になるので、オーナーの了承を得てから `--force-with-lease` で行う。ログインもできる。プレビューは**本番と同じ Firestore のデータ**を使う（画面上部に帯が出る）ので、データやルールを壊しうる変更はエミュレータのテストで確かめてから載せる。
+  - 普段のブランチごとのプレビュー URL は毎回変わり、ログインできない（Firebase の承認済みドメインにワイルドカードが使えないため）。
 - アプリとルールの両方を変えるときは、新旧の組み合わせ（新しいアプリ＋古いルール、古いアプリ＋新しいルール）でも壊れないか考える。
 
 ## Firebase コンソールでしかできない操作

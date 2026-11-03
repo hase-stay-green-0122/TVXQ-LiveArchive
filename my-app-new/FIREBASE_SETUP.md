@@ -74,6 +74,23 @@ iPhone の Safari は、別のドメインをまたぐログインの途中情�
 
 シークレットを設定するまでは、自動反映の処理は警告を出してスキップするだけです。テストは通常どおり実行されます。
 
+## 8. 公開前の確認用プレビューでログインできるようにする（1回だけ）
+
+ふつうのプレビュー版は、公開のたびに URL が変わります。そのため、Google ログインを許可できません。
+そこで `preview` ブランチ専用の**固定 URL** `https://tvxq-live-archive-preview.vercel.app` を用意して、そこだけログインできるようにします。
+プレビュー版は**本番と同じデータ**を使います（画面上部に「プレビュー版」の帯が出ます）。
+
+**Vercel**
+1. https://vercel.com を開き、プロジェクト `tvxq-live-archive` →「**Settings**」→「**Domains**」
+2. 「**Add Domain**」で `tvxq-live-archive-preview.vercel.app` を入力する
+3. 接続先に「**Preview**」を選び、Git ブランチに `preview` を指定して保存する
+
+**Firebase**（手順2と同じ画面）
+4. Authentication →「設定」→「承認済みドメイン」に `tvxq-live-archive-preview.vercel.app` を追加する
+
+**Google Cloud**（手順2-2と同じ画面）
+5. 「承認済みのリダイレクト URI」に `https://tvxq-live-archive-preview.vercel.app/__/auth/handler` を追加して保存する
+
 ## できること・できないこと
 
 | 操作 | オーナー | メンバー | 招待されていない人 |
