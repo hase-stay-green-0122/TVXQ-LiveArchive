@@ -106,6 +106,7 @@ export function TourCard({ tour, isOwner, myUid, entriesByLive, onLiveSelect, on
     <div className="tour-card">
       {delTour && (
         <DeleteDialog
+          title="ツアーを削除しますか？"
           live={{date: tour.name, venue:`全${tour.lives.length}公演と、メンバー全員の記録・写真が削除されます`}}
           onCancel={() => setDelTour(false)}
           onConfirm={() => { onTourDelete(tour.id); setDelTour(false); }}

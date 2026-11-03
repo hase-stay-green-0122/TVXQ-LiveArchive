@@ -143,7 +143,12 @@ export function LiveModal({ live, tour, entries, user, onClose }) {
             <div className="mtitle">{tour.name}</div>
             {tour.sub && <div className="msub">{tour.sub}</div>}
             <div className="mvenue">📍 {live.venue}</div>
-            {live.open && <div className="mtime-row"><div className="mtime">開場 <b>{live.open}</b></div><div className="mtime">開演 <b>{live.start}</b></div></div>}
+            {(live.open || live.start) && (
+              <div className="mtime-row">
+                {live.open  && <div className="mtime">開場 <b>{live.open}</b></div>}
+                {live.start && <div className="mtime">開演 <b>{live.start}</b></div>}
+              </div>
+            )}
           </div>
           <div className="mhero-wm">{tour.name}</div>
         </div>

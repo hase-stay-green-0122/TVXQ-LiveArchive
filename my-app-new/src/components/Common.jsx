@@ -10,11 +10,11 @@ export function Silhouette() {
   return <img className="hdr-silhouette" src={SILHOUETTE_IMG} alt="" style={{height:"95px",width:"auto",objectFit:"contain"}}/>;
 }
 
-export function DeleteDialog({ live, onCancel, onConfirm }) {
+export function DeleteDialog({ live, title = "ライブを削除しますか？", onCancel, onConfirm }) {
   return (
     <div className="del-dialog-overlay" onClick={onCancel}>
       <div className="del-dialog" onClick={e => e.stopPropagation()}>
-        <div className="del-dialog-ttl">ライブを削除しますか？</div>
+        <div className="del-dialog-ttl">{title}</div>
         <div className="del-dialog-body">
           <strong>{live.date} {live.venue}</strong> の記録を削除します。<br/>この操作は元に戻せません。
         </div>

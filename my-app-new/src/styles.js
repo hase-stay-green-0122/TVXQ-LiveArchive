@@ -206,6 +206,8 @@ export const CSS = `
   .fdivider { margin:4px 20px 14px; font-size:12px; letter-spacing:.15em; color:rgba(192,21,42,.65); text-transform:uppercase; padding-top:14px; border-top:1px solid rgba(192,21,42,.1); font-weight:600; }
   .save-btn { width:calc(100% - 40px); margin:10px 20px 0; background:linear-gradient(135deg,var(--red),var(--red-deep)); color:#fff; border:none; border-radius:12px; padding:16px; font-family:"Noto Serif JP",serif; font-size:15px; letter-spacing:.1em; cursor:pointer; transition:transform .1s, box-shadow .1s, background .2s; }
   .save-btn:active { transform:scale(.97); }
+  .outline-btn { background:transparent; border:1.5px solid rgba(192,21,42,.35); color:var(--red); border-radius:12px; padding:12px; font-family:"Noto Serif JP",serif; font-size:14px; letter-spacing:.06em; cursor:pointer; }
+  .outline-btn:active { background:rgba(192,21,42,.06); }
   .save-btn.saving { background:linear-gradient(135deg,#2a8a3e,#1a6b2e); box-shadow:0 0 0 3px rgba(42,138,62,.3); pointer-events:none; }
 
   /* 2択メニュー */

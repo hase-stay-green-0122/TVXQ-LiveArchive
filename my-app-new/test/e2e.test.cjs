@@ -166,6 +166,8 @@ let preview;
   await friend.click("text=✏️ 自分の記録を書く");
   await friend.fill("input[placeholder^='例: W1F']", "S2F / 列3");
   await friend.locator("textarea").nth(2).fill("ともだちの感想：最高だった！");
+  // 細工した Tips（HTML として解釈されるとスクリプトが動く）
+  await friend.locator("textarea").nth(5).fill('<img src=x onerror="window.__xss=1">駅は混む <strong>早めに</strong>');
   const png = path.join(OUT, "photo.png");
   if (!fs.existsSync(png)) fs.writeFileSync(png, Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64"));
   await friend.setInputFiles("input[type=file]", [png]);
@@ -178,6 +180,9 @@ let preview;
   await owner.waitForSelector("text=ともだちの感想", { timeout: 10000 }).catch(() => {});
   check("友人の記録がリアルタイムで表示", await owner.isVisible("text=ともだちの感想"));
   check("記録が2人分", (await owner.locator(".entry-card").count()) === 2);
+  check("細工した Tips のスクリプトが動かない（XSS 対策）", !(await owner.evaluate(() => window.__xss)));
+  check("細工した Tips は文字としてそのまま表示される", await owner.isVisible("text=<img src=x"));
+  check("<strong> は太字として表示される", (await owner.locator(".tip-text strong", { hasText: "早めに" }).count()) === 1);
   await shot(owner, "06-owner-sees-friend");
 
   console.log("7. 元の不具合の再現テスト：古い画面から保存しても他人の記録は消えない");
@@ -236,6 +241,29 @@ let preview;
   check("友人の画面でも公演が消える", (await friend.locator(".live-item").count()) === friendLivesBefore - 1);
   check("公演の記録も削除", (await listDocs("entries")).filter(e => e.name.includes("nissan-0426")).length === 0);
   check("記録の写真も削除（旧データの写真含む）", (await listDocs("photos")).length === 0, (await listDocs("photos")).map(p => p.name.split("/").pop()));
+
+  console.log("10b. 削除ダイアログの見出し");
+  await owner.locator(".tour-card").first().locator(".tour-del").click({ force: true });
+  check("ツアー削除では「ツアーを削除しますか？」と出る", await owner.isVisible("text=ツアーを削除しますか？"));
+  await owner.click(".del-dialog-cancel");
+
+  console.log("10c. ライブを追加（開場なし・開演あり）");
+  await owner.click(".add-btn");
+  await owner.click("text=ライブを追加");
+  await owner.locator(".modal button", { hasText: "RED OCEAN" }).click();
+  await owner.fill("input[type=date]", "2026-12-24");
+  await owner.fill("input[type=time]", "18:30");
+  await owner.fill("input[placeholder='例: 東京ドーム']", "東京ドーム");
+  await owner.locator("textarea").first().fill("1. Mirotic\n2. 呪文 [アンコール]");
+  await owner.click("text=保存してホームに戻る");
+  await owner.waitForSelector(".tour-card"); await owner.waitForTimeout(1000);
+  await ensureTourOpen(owner, "RED OCEAN");
+  await owner.locator(".live-item", { hasText: "東京ドーム" }).click({ force: true });
+  await owner.waitForSelector(".mhero");
+  check("追加したライブの開演時刻が表示される", await owner.isVisible("text=18:30"));
+  check("追加したライブのアンコールが区切られる", await owner.locator(".enc-lbl").count() === 1);
+  check("追加したライブに自分の記録が作られる", await owner.locator(".entry-card.mine .entry-me").count() === 1);
+  await owner.click("text=ホームに戻る");
 
   console.log("11. メンバーから外すと、開いている画面でも見られなくなる");
   owner.once("dialog", d => d.accept());

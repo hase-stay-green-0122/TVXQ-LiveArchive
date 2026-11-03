@@ -1,13 +1,14 @@
 // ツアーの追加・編集フォーム
 import { useState } from "react";
-import { TOUR_COLOR_PRESETS, VIS_PATTERNS, generateTourVisual } from "../lib/tourVisual.js";
+import { TOUR_COLOR_PRESETS, VIS_PATTERNS, generateTourVisual, stripSvgText } from "../lib/tourVisual.js";
 
 export function TourVisPreviewDialog({ tourSub, svgCode, onRetry, onConfirm }) {
   return (
     <div className="preview-overlay" onClick={e => e.stopPropagation()}>
       <div className="preview-dialog">
         <div className="preview-vis-wrap">
-          <div dangerouslySetInnerHTML={{__html:svgCode}} style={{width:"100%",height:"100%"}}/>
+          {/* ツアーカードと同じく <img> で表示する（HTML として埋め込まない） */}
+          <img src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(stripSvgText(svgCode))}`} alt="" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
           <div style={{position:"absolute",bottom:0,left:0,right:0,zIndex:20,display:"flex",flexDirection:"column",alignItems:"center",padding:"8px 12px 9px",background:"linear-gradient(0deg,rgba(0,0,0,.65) 0%,transparent 100%)",gap:2}}>
             {tourSub && <div style={{fontSize:10,color:"var(--gold-lt)",letterSpacing:".08em",whiteSpace:"nowrap",textAlign:"center"}}>{tourSub}</div>}
             <div style={{fontSize:11,color:"#fff",letterSpacing:".06em",whiteSpace:"nowrap",textAlign:"center"}}>yyyy.mm.dd</div>
@@ -115,6 +116,9 @@ export function EditTourForm({ tour, onClose, onSaveTour }) {
           <div style={{padding:"0 20px 8px"}}>
             <div style={{fontSize:11,color:"rgba(28,10,12,.4)",marginBottom:10,lineHeight:1.6}}>
               変更しない場合はそのまま保存できます。
+              {tour.svgCode && color !== tour.color && (
+                <><br/><span style={{color:"var(--red)"}}>テーマカラーをビジュアルに反映するには、パターンを選んで作り直してください。</span></>
+              )}
             </div>
             <div style={{display:"flex",gap:8,marginBottom:12,minHeight:28}}>
               {pat1 && <div style={{background:"var(--red)",color:"#fff",fontSize:11,padding:"3px 10px",borderRadius:12}}>{getPatLabel(pat1)}</div>}

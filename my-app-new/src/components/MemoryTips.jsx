@@ -24,13 +24,28 @@ export function MemorySection({ memory, hideEmpty = false }) {
   );
 }
 
+// Tips の本文を安全に表示する。メンバーが書いた文字を HTML として解釈すると、
+// 細工した文字で他の人のブラウザ上でプログラムが動いてしまう（XSS）ため、
+// 初期データで使っている <strong>…</strong> だけを太字にして、それ以外はすべて文字として表示する。
+function TipText({ text }) {
+  const parts = String(text ?? "").split(/(<strong>[\s\S]*?<\/strong>)/g);
+  return (
+    <div className="tip-text">
+      {parts.map((part, i) => {
+        const m = part.match(/^<strong>([\s\S]*?)<\/strong>$/);
+        return m ? <strong key={i}>{m[1]}</strong> : <span key={i}>{part}</span>;
+      })}
+    </div>
+  );
+}
+
 export function TipItem({ tip }) {
   const [copied, setCopied] = useState(false);
   return (
     <div className="tip-item">
       <span className="tip-cat">{tip.cat}</span>
       <div style={{flex:1}}>
-        <div className="tip-text" dangerouslySetInnerHTML={{__html:tip.text}}/>
+        <TipText text={tip.text}/>
         {tip.url && (
           <div className="tip-url">
             <span className="tip-url-text">{tip.url}</span>

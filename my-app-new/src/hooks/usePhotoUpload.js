@@ -34,12 +34,16 @@ export function usePhotoUpload(initial = [], uid) {
     setUploading(true);
     try {
       const room = Math.max(0, 6 - photos.length);
-      const refs = await Promise.all(files.slice(0, room).map(f => uploadPhoto(f, uid)));
+      const results = await Promise.allSettled(files.slice(0, room).map(f => uploadPhoto(f, uid)));
+      const refs = results.filter(r => r.status === "fulfilled").map(r => r.value);
+      const failed = results.filter(r => r.status === "rejected");
+      // 成功した分は（一部が失敗していても）フォームに追加し、保存されなければ後で片付ける
       pending.current.uploaded.push(...refs);
       setPhotos(prev => [...prev, ...refs].slice(0, 6));
-    } catch (err) {
-      console.error("写真のアップロードに失敗:", err);
-      alert("写真のアップロードに失敗しました。もう一度お試しください。");
+      if (failed.length) {
+        failed.forEach(r => console.error("写真のアップロードに失敗:", r.reason));
+        alert(`写真${failed.length}枚のアップロードに失敗しました。もう一度お試しください。`);
+      }
     } finally {
       setUploading(false);
     }
