@@ -315,7 +315,7 @@ const CSS = `
     .hdr-vis { height:160px; }
     .content { padding:24px 28px 60px; }
     .tour-card { border-radius:16px; margin-bottom:14px; }
-    .modal { max-height:88vh; }
+    .modal { max-height:88vh; max-height:min(88dvh, calc(100% - 24px)); }
   }
 
   /* PC（1025px〜）：2カラム */
@@ -417,7 +417,9 @@ const CSS = `
 
   /* Modal */
   .overlay { position:fixed; inset:0; background:rgba(28,10,12,.78); z-index:100; display:flex; align-items:flex-end; backdrop-filter:blur(5px); }
-  .modal { background:var(--paper); border-radius:24px 24px 0 0; width:100%; max-height:92vh; overflow-y:auto; padding:0 0 44px; }
+  /* iPhone の Safari では 100vh が「ツールバーを隠したときの高さ」になり、モーダルの上端（ホームに戻る）が画面外に出てしまう。
+     実際に見えている高さ（dvh、またはオーバーレイの高さ＝100%）を上限にする。未対応のブラウザは 92vh のまま */
+  .modal { background:var(--paper); border-radius:24px 24px 0 0; width:100%; max-height:92vh; max-height:min(92dvh, calc(100% - 24px)); overflow-y:auto; padding:0 0 44px; }
   .modal-handle { width:36px; height:4px; background:rgba(192,21,42,.18); border-radius:2px; margin:0 auto 12px; display:block; }
   .modal-nav { position:sticky; top:0; z-index:10; display:flex; flex-direction:column; background:var(--paper); border-bottom:1px solid rgba(192,21,42,.08); box-shadow:0 2px 8px rgba(28,10,12,.06); padding:12px 18px 14px; }
   .modal-nav-btns { display:flex; align-items:center; justify-content:space-between; }

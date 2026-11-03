@@ -122,6 +122,18 @@ let preview;
   await owner.waitForSelector(".entry-card.mine .photo img", { timeout: 5000 }).catch(() => {});
   check("旧データの写真が表示される", await owner.locator(".entry-card.mine .photo img").count() === 1);
   await shot(owner, "03-owner-live");
+
+  // iPhone の Safari では、ツールバーが出ているとき「見えている高さ」が 100vh より短い。
+  // その状態を再現して、詳細画面の「ホームに戻る」が画面外に押し出されないことを確認する。
+  const toolbar = await owner.addStyleTag({ content: ".overlay { top:auto !important; height:calc(100vh - 140px) !important; }" });
+  const navGap = await owner.evaluate(() => {
+    const ov = document.querySelector(".overlay").getBoundingClientRect();
+    const nav = document.querySelector(".modal .nav-back").getBoundingClientRect();
+    return Math.round(nav.top - ov.top);
+  });
+  check("Safari のツールバー表示中も「ホームに戻る」が見える", navGap >= 0, `ボタンが ${-navGap}px 画面外`);
+  await shot(owner, "03b-safari-toolbar");
+  await toolbar.evaluate(el => el.remove());
   await owner.click("text=ホームに戻る");
 
   console.log("3. 招待されていない人");
