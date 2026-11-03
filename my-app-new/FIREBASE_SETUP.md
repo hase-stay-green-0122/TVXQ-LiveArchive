@@ -20,6 +20,18 @@ Firebase コンソール（https://console.firebase.google.com/ → `tvxq-live-a
 
 ※ これを忘れると、ログインのときに `auth/unauthorized-domain` エラーになります。
 
+## 2-2. ログインの戻り先を Google に登録する（iPhone の Safari 対策）
+
+iPhone の Safari は、別のドメインをまたぐログインの途中情報を消してしまいます（`missing initial state` エラー）。
+そのためアプリでは、ログイン用のページを `tvxq-live-archive.vercel.app` から配信しています（`vercel.json` で中継）。
+この戻り先の URL を Google に登録します。
+
+1. https://console.cloud.google.com/apis/credentials?project=tvxq-live-archive を開く（Firebase と同じ Google アカウントで）
+2. 「OAuth 2.0 クライアント ID」の **「Web client (auto created by Google Service)」** をタップ
+3. **「承認済みのリダイレクト URI」** の「URI を追加」を押し、次を入力する
+   `https://tvxq-live-archive.vercel.app/__/auth/handler`
+4. 一番下の **「保存」** を押す（反映まで数分かかることがあります）
+
 ## 3. アプリを公開する
 
 `main` にマージすると、Vercel が自動でデプロイします。

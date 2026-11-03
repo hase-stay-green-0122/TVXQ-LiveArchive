@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { signIn, signOut, normalizeEmail, OWNER_EMAIL } from "../lib/firebase.js";
+import { useState, useEffect } from "react";
+import { signIn, signOut, checkRedirectError, normalizeEmail, OWNER_EMAIL } from "../lib/firebase.js";
 import { addMember, removeMember } from "../lib/store.js";
 
 const screenStyle = {
@@ -39,16 +39,30 @@ export function MessageScreen({ message, children }) {
   );
 }
 
+const loginErrorMessage = (err) =>
+  err?.code === "auth/unauthorized-domain"
+    ? "このURLはログインが許可されていません。オーナーに連絡してください。"
+    : "ログインに失敗しました。もう一度お試しください。";
+
 export function LoginScreen() {
   const [busy, setBusy]   = useState(false);
   const [error, setError] = useState(null);
+
+  // リダイレクト方式のログインから戻ってきたときの失敗を表示する
+  useEffect(() => {
+    let alive = true;
+    checkRedirectError().then(err => {
+      if (err && alive) { console.error("ログインに失敗:", err); setError(loginErrorMessage(err)); }
+    });
+    return () => { alive = false; };
+  }, []);
 
   const handleLogin = async () => {
     setBusy(true); setError(null);
     try { await signIn(); }
     catch (err) {
       console.error("ログインに失敗:", err);
-      setError("ログインに失敗しました。もう一度お試しください。");
+      setError(loginErrorMessage(err));
     } finally { setBusy(false); }
   };
 

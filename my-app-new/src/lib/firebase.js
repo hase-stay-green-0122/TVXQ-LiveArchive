@@ -4,13 +4,23 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import {
-  getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect,
+  getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult,
   onAuthStateChanged, signOut as fbSignOut,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
+// 本番では、ログイン用のページ（/__/auth/...）をアプリと同じドメインから配信する
+// （vercel.json で firebaseapp.com へ中継）。iPhone の Safari などは、別ドメインをまたぐ
+// ログインの途中情報を消してしまい「missing initial state」エラーになるため。
+// 中継先の URL は Google Cloud の OAuth クライアントに「承認済みのリダイレクト URI」として
+// 登録が必要（FIREBASE_SETUP.md 参照）。それ以外の環境（プレビュー・開発）は従来どおり。
+const PRODUCTION_HOST = "tvxq-live-archive.vercel.app";
+const authDomain = typeof location !== "undefined" && location.hostname === PRODUCTION_HOST
+  ? PRODUCTION_HOST
+  : "tvxq-live-archive.firebaseapp.com";
+
 const firebaseConfig = {
   apiKey: "AIzaSyB9AckvcNLR4TWFXMqtI0uaSIZEF1wXhoU",
-  authDomain: "tvxq-live-archive.firebaseapp.com",
+  authDomain,
   projectId: "tvxq-live-archive",
   storageBucket: "tvxq-live-archive.firebasestorage.app",
   messagingSenderId: "687624555209",
@@ -48,3 +58,9 @@ export const signIn = async () => {
 };
 
 export const signOut = () => fbSignOut(auth);
+
+// リダイレクト方式でログインした後、戻ってきたときのエラーを取り出す（成功時は null）
+export const checkRedirectError = async () => {
+  try { await getRedirectResult(auth); return null; }
+  catch (err) { return err; }
+};

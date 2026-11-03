@@ -17,6 +17,8 @@
   - `FIREBASE_SETUP.md`：Firebase コンソールで行う設定の手順（オーナー向け）
 - `.github/workflows/ci.yml`：CI とルールの自動反映
 
+ログインは、本番（`tvxq-live-archive.vercel.app`）では `authDomain` をアプリ自身のドメインにしている。`vercel.json` で `/__/auth/*` と `/__/firebase/*` を `tvxq-live-archive.firebaseapp.com` に中継し、iPhone の Safari で起きる `missing initial state` エラーを避けている。Google Cloud の OAuth クライアントに、リダイレクト URI `https://tvxq-live-archive.vercel.app/__/auth/handler` の登録が必要。
+
 Firebase の SDK は npm ではなく、gstatic の CDN（`https://www.gstatic.com/firebasejs/10.12.0/...`）から直接 import している。バージョンを上げるときは、すべての import を同時に変えること。
 
 ## データ構造（Firestore、プロジェクト `tvxq-live-archive`）
