@@ -39,11 +39,16 @@ function TipText({ text }) {
   );
 }
 
+// 入力フォームから書いた Tips には、すべて同じ分類「📌 Tips」が付く。
+// 毎行に同じラベルを出すとくどいので、独自の分類（例：🍜 ライブ前グルメ）があるときだけ表示する
+const DEFAULT_TIP_CAT = "📌 Tips";
+
 export function TipItem({ tip }) {
   const [copied, setCopied] = useState(false);
+  const hasOwnCat = tip.cat && tip.cat !== DEFAULT_TIP_CAT;
   return (
     <div className="tip-item">
-      <span className="tip-cat">{tip.cat}</span>
+      {hasOwnCat ? <span className="tip-cat">{tip.cat}</span> : <span className="tip-dot">•</span>}
       <div style={{flex:1}}>
         <TipText text={tip.text}/>
         {tip.url && (
@@ -60,10 +65,10 @@ export function TipItem({ tip }) {
   );
 }
 
+// 見出しは呼び出し側（記録カードの「Tips」）に任せ、ここでは中身だけを表示する
 export function TipsSection({ tips }) {
   return (
     <div className="tips-box">
-      <div className="tips-hdr"><span className="tips-hdr-ic">📌</span><span className="tips-hdr-tt">Live を楽しむための Tips</span><span className="tips-badge">TIPS</span></div>
       {(!tips || tips.length === 0)
         ? <div className="tip-item"><div className="tip-text" style={{color:"rgba(255,255,255,.28)",fontStyle:"italic"}}>まだ Tips が記録されていません…</div></div>
         : tips.map((tip, i) => <TipItem key={i} tip={tip}/>)
@@ -99,7 +104,7 @@ export function MemInputs({ mem, setMem }) {
 export function TipsInput({ value, onChange }) {
   return (
     <div className="fsec">
-      <label className="flbl">Tips（1行1項目）</label>
+      <label className="flbl">1行に1つずつ書いてください</label>
       <textarea className="finp" rows={4} style={{resize:"none",lineHeight:1.8}}
         placeholder={"コクーンのフードコートが穴場\n開演1時間前に並ぶとトイレも余裕\n2階スタンドは段差があって見やすい"}
         value={value} onChange={onChange}

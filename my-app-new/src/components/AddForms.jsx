@@ -140,7 +140,7 @@ export function AddForm({ user, onClose, allTours }) {
         <PhotoEditor photos={photos} onAdd={handleAdd} onRemove={handleRemove} uploading={uploading}/>
         <div className="fdivider">思い出メモ<span className="fscope mine">あなたの記録</span></div>
         <MemInputs mem={mem} setMem={setMem}/>
-        <div className="fdivider">Live を楽しむための Tips<span className="fscope mine">あなたの記録</span></div>
+        <div className="fdivider">Tips<span className="fscope mine">あなたの記録</span></div>
         <TipsInput value={tipsText} onChange={e=>setTipsText(e.target.value)}/>
         <SaveHomeButton doSave={doSave} onGoHome={onClose} disabled={uploading}/>
       </div>

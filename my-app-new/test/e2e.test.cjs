@@ -183,6 +183,8 @@ let preview;
   check("細工した Tips のスクリプトが動かない（XSS 対策）", !(await owner.evaluate(() => window.__xss)));
   check("細工した Tips は文字としてそのまま表示される", await owner.isVisible("text=<img src=x"));
   check("<strong> は太字として表示される", (await owner.locator(".tip-text strong", { hasText: "早めに" }).count()) === 1);
+  await owner.locator(".entry-card").filter({ hasText: "ともだち" }).screenshot({ path: path.join(OUT, "06b-friend-entry.png") });
+  await owner.locator(".entry-card.mine").screenshot({ path: path.join(OUT, "06c-owner-entry.png") });
   await shot(owner, "06-owner-sees-friend");
 
   console.log("7. 元の不具合の再現テスト：古い画面から保存しても他人の記録は消えない");

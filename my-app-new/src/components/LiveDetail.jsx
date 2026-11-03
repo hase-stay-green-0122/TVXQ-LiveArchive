@@ -100,7 +100,7 @@ export function EntryCard({ entry, isMine, isFeatured, onEdit }) {
         ? <MemorySection memory={memory} hideEmpty/>
         : <div className="empty" style={{fontSize:13}}>まだ記録されていません…</div>}
       {tips.length > 0 && <>
-        <div className="entry-sub">Live を楽しむための Tips</div>
+        <div className="entry-sub">Tips</div>
         <TipsSection tips={tips}/>
       </>}
     </div>

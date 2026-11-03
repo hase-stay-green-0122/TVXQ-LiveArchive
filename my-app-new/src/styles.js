@@ -181,13 +181,10 @@ export const CSS = `
   .empty { color:rgba(28,10,12,.28); font-style:italic; }
 
   /* Tips */
-  .tips-box { background:linear-gradient(135deg,#1c0a0c,#2a0d10); border-radius:12px; overflow:hidden; }
-  .tips-hdr { display:flex; align-items:center; gap:8px; padding:12px 16px 10px; border-bottom:1px solid rgba(255,255,255,.07); }
-  .tips-hdr-ic { font-size:16px; }
-  .tips-hdr-tt { font-size:13px; letter-spacing:.12em; text-transform:uppercase; color:rgba(255,255,255,.6); font-weight:600; }
-  .tips-badge { margin-left:auto; background:var(--gold); color:var(--ink); font-size:8px; font-weight:700; padding:2px 7px; border-radius:3px; }
+  .tips-box { background:linear-gradient(135deg,#1c0a0c,#2a0d10); border-radius:12px; overflow:hidden; padding:4px 0; }
   .tip-item { display:flex; align-items:flex-start; gap:10px; padding:9px 16px; border-bottom:1px solid rgba(255,255,255,.04); }
   .tip-item:last-child { border-bottom:none; }
+  .tip-dot { flex-shrink:0; color:var(--gold-lt); font-size:14px; line-height:1.75; }
   .tip-cat { flex-shrink:0; background:rgba(192,21,42,.25); border-radius:6px; padding:4px 10px; font-size:11px; color:rgba(255,255,255,.8); margin-top:1px; white-space:nowrap; }
   .tip-text { font-size:15px; color:rgba(255,255,255,.85); line-height:1.75; text-align:left; }
   .tip-text strong { color:var(--gold-lt); font-weight:600; }
