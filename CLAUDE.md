@@ -7,11 +7,16 @@
 ## 構成
 
 - `my-app-new/`：アプリ本体（React 19 + Vite 8、TypeScript なし）
-  - `src/App.jsx`：画面のほぼすべて（約 2,300 行。初期データ `TOURS`、CSS 文字列 `CSS` も含む）
-  - `src/lib/firebase.js`：Firebase 初期化、Google ログイン、`OWNER_EMAIL`
-  - `src/lib/store.js`：Firestore の読み書き・リアルタイム購読・旧データ移行
-  - `src/lib/photos.js`：写真の圧縮・保存・削除
-  - `src/components/Auth.jsx`：ログイン画面、招待されていない人向けの画面、メンバー管理
+  - `src/App.jsx`：ログイン → メンバー確認 → アーカイブ画面（`App` / `MemberGate` / `Archive`）。データの購読と、ホーム画面の組み立て
+  - `src/components/`：画面の部品
+    - `TourCard.jsx`（ホームのツアーカード）、`LiveDetail.jsx`（公演詳細・みんなの記録・座席マップ）、`EditForm.jsx`（公演の編集）
+    - `AddForms.jsx`（＋メニュー・ライブ追加）、`TourForms.jsx`（ツアーの追加・編集）
+    - `Photos.jsx`、`MemoryTips.jsx`、`Common.jsx`（共通の小さな部品）、`Auth.jsx`（ログイン・招待・メンバー管理）
+  - `src/lib/`：画面を持たない処理
+    - `firebase.js`（初期化・Google ログイン・`OWNER_EMAIL`）、`store.js`（Firestore の読み書き・購読・旧データ移行）、`photos.js`（写真の圧縮・保存・削除）
+    - `text.js`（セトリ・Tips の文字列変換）、`tourVisual.js`（ツアーのビジュアル SVG 生成）
+  - `src/hooks/usePhotoUpload.js`：編集フォームの写真欄の状態管理
+  - `src/styles.js`（CSS 文字列）、`src/constants.js`、`src/data/`（初期データ・画像）
   - `firestore.rules`：セキュリティルール（本番に自動で反映される。後述）
   - `test/`：テスト用の別パッケージ（Vercel のビルドには含まれない）
   - `FIREBASE_SETUP.md`：Firebase コンソールで行う設定の手順（オーナー向け）
